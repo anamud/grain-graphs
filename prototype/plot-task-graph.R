@@ -29,7 +29,7 @@ if (Rstudio_mode) {
     parsed <- list(data="task-stats.processed",
                    palette="color",
                    out="task-graph",
-                   cplengthonly=F,
+                   enumcriticalpath=F,
                    analyze=T,
                    config="task-graph-analysis.cfg",
                    verbose=T,
@@ -40,7 +40,7 @@ if (Rstudio_mode) {
                         make_option(c("-d","--data"), help = "Task stats.", metavar="FILE"),
                         make_option(c("-p","--palette"), default="color", help = "Color palette for graph elements [default \"%default\"]."),
                         make_option(c("-o","--out"), default="task-graph", help = "Output file suffix [default \"%default\"].", metavar="STRING"),
-                        make_option(c("--cplengthonly"), action="store_true", default=FALSE, help="Calculate critical path length only. Skip critical path enumeration."),
+                        make_option(c("--enumcriticalpath"), action="store_true", default=FALSE, help="Enumerate critical path."),
                         make_option(c("--analyze"), action="store_true", default=FALSE, help="Analyze task graph for problems."),
                         make_option(c("--config"), default="task-graph-analysis.cfg", help = "Analysis configuration file [default \"%default\"].", metavar="FILE"),
                         make_option(c("--verbose"), action="store_true", default=TRUE, help="Print output [default]."),
@@ -416,8 +416,8 @@ if (!is.na(path_weight)) {
 
     # Get critical path
     #Rprof("profile-critpathcalc.out")
-    if (parsed$cplengthonly) {
-        # Get critical path length
+    if (!parsed$enumcriticalpath) {
+        # Compute critical path length
         sp <- shortest.paths(tg, v=start_index, to=end_index, mode="out")
         lpl <- -as.numeric(sp)
     } else {
@@ -490,7 +490,8 @@ if (!is.na(path_weight)) {
     my_print()
     sink()
 
-    if (!parsed$cplengthonly) {
+    # Shape calculation
+    if (parsed$enumcriticalpath) {
         # Clear rpath since dot/table writing complains
         tg <- remove.vertex.attribute(tg,"rpath")
 
@@ -522,7 +523,7 @@ my_print("# Task graph structure:")
 my_print(paste("Number of nodes =", length(V(tg))))
 my_print(paste("Number of edges =", length(E(tg))))
 my_print(paste("Number of tasks =", length(tg_data$task)))
-if (!parsed$cplengthonly)
+if (parsed$enumcriticalpath)
     my_print(paste("Number of critical tasks =", length(tg_df$task[tg_df$on_crit_path == 1])))
 my_print(paste("Number of forks =", length(fork_nodes_unique)))
 my_print("Out-degree distribution of forks:")
@@ -630,7 +631,7 @@ if (parsed$analyze) {
         my_print(paste(length(prob_task$task), "tasks have mem_hier_util >", mem_hier_util_thresh))
         sink()
 
-        if (!parsed$cplengthonly) {
+        if (parsed$enumcriticalpath) {
             prob_task_critical <- subset(tg_df, mem_hier_util > mem_hier_util_thresh & on_crit_path == 1, select=task)
 
             sink(tg_analysis_out_file, append=T)
@@ -662,7 +663,7 @@ if (parsed$analyze) {
         my_print(paste(length(prob_task$task), "tasks have mem_fp >", mem_fp_thresh))
         sink()
 
-        if (!parsed$cplengthonly) {
+        if (parsed$enumcriticalpath) {
             prob_task_critical <- subset(tg_df, mem_fp > mem_fp_thresh & on_crit_path == 1, select=task)
 
             sink(tg_analysis_out_file, append=T)
@@ -694,7 +695,7 @@ if (parsed$analyze) {
         my_print(paste(length(prob_task$task), "tasks have compute_int <", compute_int_thresh))
         sink()
 
-        if (!parsed$cplengthonly) {
+        if (parsed$enumcriticalpath) {
             prob_task_critical <- subset(tg_df, compute_int < compute_int_thresh & on_crit_path == 1, select=task)
 
             sink(tg_analysis_out_file, append=T)
@@ -726,7 +727,7 @@ if (parsed$analyze) {
         my_print(paste(length(prob_task$task), "tasks have work_deviation >", work_deviation_thresh))
         sink()
 
-        if (!parsed$cplengthonly) {
+        if (parsed$enumcriticalpath) {
             prob_task_critical <- subset(tg_df, work_deviation > work_deviation_thresh & on_crit_path == 1, select=task)
 
             sink(tg_analysis_out_file, append=T)
@@ -758,7 +759,7 @@ if (parsed$analyze) {
         my_print(paste(length(prob_task$task), "tasks have parallel_benefit <", parallel_benefit_thresh))
         sink()
 
-        if (!parsed$cplengthonly) {
+        if (parsed$enumcriticalpath) {
             prob_task_critical <- subset(tg_df, parallel_benefit < parallel_benefit_thresh & on_crit_path == 1, select=task)
 
             sink(tg_analysis_out_file, append=T)
@@ -781,7 +782,7 @@ if (parsed$analyze) {
     }# }}}
 
     # Parallelism problem
-    if (!parsed$cplengthonly) {# {{{
+    if (parsed$enumcriticalpath) {# {{{
         prob_tg <- base_tg
         parallelism_thresh <- length(unique(tg_data$cpu_id))
         ranges <- which(tg_shape$counts > 0 && tg_shape$counts < parallelism_thresh)
@@ -820,7 +821,7 @@ if (parsed$analyze) {
         my_print(paste(length(prob_task$task), "tasks have median_shape_contrib <", shape_contrib_thresh))
         sink()
 
-        if (!parsed$cplengthonly) {
+        if (parsed$enumcriticalpath) {
             prob_task_critical <- subset(tg_df, median_shape_contrib < shape_contrib_thresh & on_crit_path == 1, select=task)
 
             sink(tg_analysis_out_file, append=T)
@@ -852,7 +853,7 @@ if (parsed$analyze) {
         my_print(paste(length(prob_task$task), "tasks have min_shape_contrib <", shape_contrib_thresh))
         sink()
 
-        if (!parsed$cplengthonly) {
+        if (parsed$enumcriticalpath) {
             prob_task_critical <- subset(tg_df, min_shape_contrib < shape_contrib_thresh & on_crit_path == 1, select=task)
 
             sink(tg_analysis_out_file, append=T)
@@ -931,7 +932,7 @@ if (parsed$analyze) {
         my_print(paste(length(prob_task$task), "tasks have max_shape_contrib <", shape_contrib_thresh))
         sink()
 
-        if (!parsed$cplengthonly) {
+        if (parsed$enumcriticalpath) {
             prob_task_critical <- subset(tg_df, max_shape_contrib < shape_contrib_thresh & on_crit_path == 1, select=task)
 
             sink(tg_analysis_out_file, append=T)
@@ -963,7 +964,7 @@ if (parsed$analyze) {
         my_print(paste(length(prob_task$task), "tasks have sibling_work_balance >", sibling_work_balance_thresh))
         sink()
 
-        if (!parsed$cplengthonly) {
+        if (parsed$enumcriticalpath) {
             prob_task_critical <- subset(tg_df, sibling_work_balance > sibling_work_balance_thresh & on_crit_path == 1, select=task)
 
             sink(tg_analysis_out_file, append=T)
@@ -995,7 +996,7 @@ if (parsed$analyze) {
         my_print(paste(length(prob_task$task), "tasks have sibling_scatter >", sibling_scatter_thresh))
         sink()
 
-        if (!parsed$cplengthonly) {
+        if (parsed$enumcriticalpath) {
             prob_task_critical <- subset(tg_df, sibling_scatter > sibling_scatter_thresh & on_crit_path == 1, select=task)
 
             sink(tg_analysis_out_file, append=T)
