@@ -30,8 +30,8 @@ if (Rstudio_mode) {
                    palette="color",
                    out="task-graph",
                    enumcriticalpath=F,
-                   analyze=T,
-                   config="task-graph-analysis.cfg",
+                   showproblems=T,
+                   problemconfig="grain-problems.cfg",
                    verbose=T,
                    timing=F,
                    layout=F)
@@ -41,8 +41,8 @@ if (Rstudio_mode) {
                         make_option(c("-p","--palette"), default="color", help = "Color palette for graph elements [default \"%default\"]."),
                         make_option(c("-o","--out"), default="task-graph", help = "Output file suffix [default \"%default\"].", metavar="STRING"),
                         make_option(c("--enumcriticalpath"), action="store_true", default=FALSE, help="Enumerate critical path."),
-                        make_option(c("--analyze"), action="store_true", default=FALSE, help="Analyze task graph for problems."),
-                        make_option(c("--config"), default="task-graph-analysis.cfg", help = "Analysis configuration file [default \"%default\"].", metavar="FILE"),
+                        make_option(c("--showproblems"), action="store_true", default=FALSE, help="Analyze graph for problems."),
+                        make_option(c("--problemconfig"), default="grain-problems.cfg", help = "Problem configuration file [default \"%default\"].", metavar="FILE"),
                         make_option(c("--verbose"), action="store_true", default=TRUE, help="Print output [default]."),
                         make_option(c("--quiet"), action="store_false", dest="verbose", help="Print little output."),
                         make_option(c("--timing"), action="store_true", default=FALSE, help="Print processing time."),
@@ -600,7 +600,7 @@ my_print(paste("Wrote file:", tg_out_file))
 if (parsed$timing) toc("Write node attributes")
 
 # Show problems
-if (parsed$analyze) {
+if (parsed$showproblems) {
     if (parsed$verbose) my_print("Analyzing graph for problems ...")
     if (parsed$timing) tic(type="elapsed")
 
@@ -614,10 +614,10 @@ if (parsed$analyze) {
     # Set base tg edge colors to gray
     #base_tg <- set.edge.attribute(base_tg, name='color', value="#c0c0c0")
 
-    # Analysis text output
-    tg_analysis_out_file <- paste(gsub(". $", "", parsed$out), "-analysis.info", sep="")
-    sink(tg_analysis_out_file)
-    my_print("# Analysis:")
+    # problem text output
+    tg_problem_out_file <- paste(gsub(". $", "", parsed$out), "-problem.info", sep="")
+    sink(tg_problem_out_file)
+    my_print("# Problems:")
     my_print()
     sink()
 
@@ -627,19 +627,19 @@ if (parsed$analyze) {
         mem_hier_util_thresh <- 0.5
         prob_task <- subset(tg_data, mem_hier_util > mem_hier_util_thresh, select=task)
 
-        sink(tg_analysis_out_file, append=T)
+        sink(tg_problem_out_file, append=T)
         my_print(paste(length(prob_task$task), "tasks have mem_hier_util >", mem_hier_util_thresh))
         sink()
 
         if (parsed$enumcriticalpath) {
             prob_task_critical <- subset(tg_df, mem_hier_util > mem_hier_util_thresh & on_crit_path == 1, select=task)
 
-            sink(tg_analysis_out_file, append=T)
+            sink(tg_problem_out_file, append=T)
             my_print(paste("    ", length(prob_task_critical$task), " of which are on the critical path."))
             sink()
         }
 
-        sink(tg_analysis_out_file, append=T)
+        sink(tg_problem_out_file, append=T)
         my_print()
         sink()
 
@@ -659,19 +659,19 @@ if (parsed$analyze) {
         mem_fp_thresh <- 512000
         prob_task <- subset(tg_data, mem_fp > mem_fp_thresh, select=task)
 
-        sink(tg_analysis_out_file, append=T)
+        sink(tg_problem_out_file, append=T)
         my_print(paste(length(prob_task$task), "tasks have mem_fp >", mem_fp_thresh))
         sink()
 
         if (parsed$enumcriticalpath) {
             prob_task_critical <- subset(tg_df, mem_fp > mem_fp_thresh & on_crit_path == 1, select=task)
 
-            sink(tg_analysis_out_file, append=T)
+            sink(tg_problem_out_file, append=T)
             my_print(paste("    ", length(prob_task_critical$task), " of which are on the critical path."))
             sink()
         }
 
-        sink(tg_analysis_out_file, append=T)
+        sink(tg_problem_out_file, append=T)
         my_print()
         sink()
 
@@ -691,19 +691,19 @@ if (parsed$analyze) {
         compute_int_thresh <- 2
         prob_task <- subset(tg_data, compute_int < compute_int_thresh, select=task)
 
-        sink(tg_analysis_out_file, append=T)
+        sink(tg_problem_out_file, append=T)
         my_print(paste(length(prob_task$task), "tasks have compute_int <", compute_int_thresh))
         sink()
 
         if (parsed$enumcriticalpath) {
             prob_task_critical <- subset(tg_df, compute_int < compute_int_thresh & on_crit_path == 1, select=task)
 
-            sink(tg_analysis_out_file, append=T)
+            sink(tg_problem_out_file, append=T)
             my_print(paste("    ", length(prob_task_critical$task), " of which are on the critical path."))
             sink()
         }
 
-        sink(tg_analysis_out_file, append=T)
+        sink(tg_problem_out_file, append=T)
         my_print()
         sink()
 
@@ -723,19 +723,19 @@ if (parsed$analyze) {
         work_deviation_thresh <- 2
         prob_task <- subset(tg_data, work_deviation > work_deviation_thresh, select=task)
 
-        sink(tg_analysis_out_file, append=T)
+        sink(tg_problem_out_file, append=T)
         my_print(paste(length(prob_task$task), "tasks have work_deviation >", work_deviation_thresh))
         sink()
 
         if (parsed$enumcriticalpath) {
             prob_task_critical <- subset(tg_df, work_deviation > work_deviation_thresh & on_crit_path == 1, select=task)
 
-            sink(tg_analysis_out_file, append=T)
+            sink(tg_problem_out_file, append=T)
             my_print(paste("    ", length(prob_task_critical$task), " of which are on the critical path."))
             sink()
         }
 
-        sink(tg_analysis_out_file, append=T)
+        sink(tg_problem_out_file, append=T)
         my_print()
         sink()
 
@@ -755,19 +755,19 @@ if (parsed$analyze) {
         parallel_benefit_thresh <- 1
         prob_task <- subset(tg_data, parallel_benefit < parallel_benefit_thresh, select=task)
 
-        sink(tg_analysis_out_file, append=T)
+        sink(tg_problem_out_file, append=T)
         my_print(paste(length(prob_task$task), "tasks have parallel_benefit <", parallel_benefit_thresh))
         sink()
 
         if (parsed$enumcriticalpath) {
             prob_task_critical <- subset(tg_df, parallel_benefit < parallel_benefit_thresh & on_crit_path == 1, select=task)
 
-            sink(tg_analysis_out_file, append=T)
+            sink(tg_problem_out_file, append=T)
             my_print(paste("    ", length(prob_task_critical$task), " of which are on the critical path."))
             sink()
         }
 
-        sink(tg_analysis_out_file, append=T)
+        sink(tg_problem_out_file, append=T)
         my_print()
         sink()
 
@@ -787,7 +787,7 @@ if (parsed$analyze) {
         parallelism_thresh <- length(unique(tg_data$cpu_id))
         ranges <- which(tg_shape$counts > 0 && tg_shape$counts < parallelism_thresh)
 
-        sink(tg_analysis_out_file, append=T)
+        sink(tg_problem_out_file, append=T)
         my_print(paste(length(ranges), "shape bins out of", length(tg_shape$counts), "have parallelism <", parallelism_thresh))
         sink()
 
@@ -802,7 +802,7 @@ if (parsed$analyze) {
             # TODO: Highlight range.
         }
 
-        sink(tg_analysis_out_file, append=T)
+        sink(tg_problem_out_file, append=T)
         my_print()
         sink()
 
@@ -817,19 +817,19 @@ if (parsed$analyze) {
         shape_contrib_thresh <- length(unique(tg_data$cpu_id))
         prob_task <- subset(tg_data, median_shape_contrib < shape_contrib_thresh, select=task)
 
-        sink(tg_analysis_out_file, append=T)
+        sink(tg_problem_out_file, append=T)
         my_print(paste(length(prob_task$task), "tasks have median_shape_contrib <", shape_contrib_thresh))
         sink()
 
         if (parsed$enumcriticalpath) {
             prob_task_critical <- subset(tg_df, median_shape_contrib < shape_contrib_thresh & on_crit_path == 1, select=task)
 
-            sink(tg_analysis_out_file, append=T)
+            sink(tg_problem_out_file, append=T)
             my_print(paste("    ", length(prob_task_critical$task), " of which are on the critical path."))
             sink()
         }
 
-        sink(tg_analysis_out_file, append=T)
+        sink(tg_problem_out_file, append=T)
         my_print()
         sink()
 
@@ -849,19 +849,19 @@ if (parsed$analyze) {
         shape_contrib_thresh <- length(unique(tg_data$cpu_id))
         prob_task <- subset(tg_data, min_shape_contrib < shape_contrib_thresh, select=task)
 
-        sink(tg_analysis_out_file, append=T)
+        sink(tg_problem_out_file, append=T)
         my_print(paste(length(prob_task$task), "tasks have min_shape_contrib <", shape_contrib_thresh))
         sink()
 
         if (parsed$enumcriticalpath) {
             prob_task_critical <- subset(tg_df, min_shape_contrib < shape_contrib_thresh & on_crit_path == 1, select=task)
 
-            sink(tg_analysis_out_file, append=T)
+            sink(tg_problem_out_file, append=T)
             my_print(paste("    ", length(prob_task_critical$task), " of which are on the critical path."))
             sink()
         }
 
-        sink(tg_analysis_out_file, append=T)
+        sink(tg_problem_out_file, append=T)
         my_print()
         sink()
 
@@ -928,19 +928,19 @@ if (parsed$analyze) {
         shape_contrib_thresh <- length(unique(tg_data$cpu_id))
         prob_task <- subset(tg_data, max_shape_contrib < shape_contrib_thresh, select=task)
 
-        sink(tg_analysis_out_file, append=T)
+        sink(tg_problem_out_file, append=T)
         my_print(paste(length(prob_task$task), "tasks have max_shape_contrib <", shape_contrib_thresh))
         sink()
 
         if (parsed$enumcriticalpath) {
             prob_task_critical <- subset(tg_df, max_shape_contrib < shape_contrib_thresh & on_crit_path == 1, select=task)
 
-            sink(tg_analysis_out_file, append=T)
+            sink(tg_problem_out_file, append=T)
             my_print(paste("    ", length(prob_task_critical$task), " of which are on the critical path."))
             sink()
         }
 
-        sink(tg_analysis_out_file, append=T)
+        sink(tg_problem_out_file, append=T)
         my_print()
         sink()
 
@@ -960,19 +960,19 @@ if (parsed$analyze) {
         sibling_work_balance_thresh <- 2
         prob_task <- subset(tg_data, sibling_work_balance > sibling_work_balance_thresh, select=task)
 
-        sink(tg_analysis_out_file, append=T)
+        sink(tg_problem_out_file, append=T)
         my_print(paste(length(prob_task$task), "tasks have sibling_work_balance >", sibling_work_balance_thresh))
         sink()
 
         if (parsed$enumcriticalpath) {
             prob_task_critical <- subset(tg_df, sibling_work_balance > sibling_work_balance_thresh & on_crit_path == 1, select=task)
 
-            sink(tg_analysis_out_file, append=T)
+            sink(tg_problem_out_file, append=T)
             my_print(paste("    ", length(prob_task_critical$task), " of which are on the critical path."))
             sink()
         }
 
-        sink(tg_analysis_out_file, append=T)
+        sink(tg_problem_out_file, append=T)
         my_print()
         sink()
 
@@ -992,19 +992,19 @@ if (parsed$analyze) {
         sibling_scatter_thresh <- (length(unique(tg_data$cpu_id))/4)
         prob_task <- subset(tg_data, sibling_scatter > sibling_scatter_thresh, select=task)
 
-        sink(tg_analysis_out_file, append=T)
+        sink(tg_problem_out_file, append=T)
         my_print(paste(length(prob_task$task), "tasks have sibling_scatter >", sibling_scatter_thresh))
         sink()
 
         if (parsed$enumcriticalpath) {
             prob_task_critical <- subset(tg_df, sibling_scatter > sibling_scatter_thresh & on_crit_path == 1, select=task)
 
-            sink(tg_analysis_out_file, append=T)
+            sink(tg_problem_out_file, append=T)
             my_print(paste("    ", length(prob_task_critical$task), " of which are on the critical path."))
             sink()
         }
 
-        sink(tg_analysis_out_file, append=T)
+        sink(tg_problem_out_file, append=T)
         my_print()
         sink()
 
@@ -1019,7 +1019,7 @@ if (parsed$analyze) {
         my_print(paste("Wrote file:", tg_out_file))
     }# }}}
 
-    my_print(paste("Wrote file:", tg_analysis_out_file))
+    my_print(paste("Wrote file:", tg_problem_out_file))
     if (parsed$timing) toc("Analyzing graph for problems")
 }
 
