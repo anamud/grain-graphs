@@ -36,9 +36,8 @@ if (Rstudio_mode) {
                    timing=F,
                    layout=F)
 } else {
-    option_list <- list(
-                        make_option(c("-d","--data"), help = "Task stats.", metavar="FILE"),
-                        make_option(c("-p","--palette"), default="color", help = "Color palette for graph elements [default \"%default\"]."),
+    option_list <- list(make_option(c("-d","--data"), help = "Task stats.", metavar="FILE"),
+                        make_option(c("-p","--palette"), default="color", help = "Color palette [default \"%default\"]."),
                         make_option(c("-o","--out"), default="task-graph", help = "Output file suffix [default \"%default\"].", metavar="STRING"),
                         make_option(c("--enumcriticalpath"), action="store_true", default=FALSE, help="Enumerate critical path."),
                         make_option(c("--showproblems"), action="store_true", default=FALSE, help="Analyze graph for problems."),
