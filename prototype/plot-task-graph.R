@@ -3,31 +3,12 @@ rm(list=ls())
 
 # Include
 mir_root <- Sys.getenv("GRAIN_GRAPHS_ROOT")
-source(paste(mir_root,"prototype/common.R",sep=""))
-
-# Graph element sizes
-join_size <- 10
-fork_size <- join_size
-fork_size_mult <- 10
-fork_size_bins <- 10
-start_size <- 15
-end_size <- start_size
-task_size <- 30
-task_size_mult <- 10
-task_size_bins <- 10
-
-# Graph element shapes
-task_shape <- "rectangle"
-fork_shape <- "circle"
-join_shape <- fork_shape
-start_shape <- fork_shape
-end_shape <- start_shape
+source(paste(mir_root,"/prototype/common.R",sep=""))
 
 # Parse args
 Rstudio_mode <- F
 if (Rstudio_mode) {
     parsed <- list(data="task-stats.processed",
-                   palette="color",
                    out="task-graph",
                    enumcriticalpath=F,
                    showproblems=T,
@@ -39,7 +20,6 @@ if (Rstudio_mode) {
                    layout=F)
 } else {
     option_list <- list(make_option(c("-d","--data"), help = "Task stats.", metavar="FILE"),
-                        make_option(c("-p","--palette"), default="color", help = "Color palette [default \"%default\"]."),
                         make_option(c("-o","--out"), default="task-graph", help = "Output file suffix [default \"%default\"].", metavar="STRING"),
                         make_option(c("--enumcriticalpath"), action="store_true", default=FALSE, help="Enumerate critical path."),
                         make_option(c("--showproblems"), action="store_true", default=FALSE, help="Analyze graph for problems."),
@@ -61,6 +41,44 @@ if (Rstudio_mode) {
 
 if (parsed$verbose) my_print("Initializing ...")
 
+# Set grain and edge property configuration
+grain_prop_cfg <- read.csv(parsed$grainpropertyconfig, header=TRUE)
+edge_prop_cfg <- read.csv(parsed$edgepropertyconfig, header=TRUE)
+
+# Grain sizes
+fork_size <- as.numeric(unlist(subset(grain_prop_cfg, type == "fork" & property == "size", select = value1)))
+join_size <- as.numeric(unlist(subset(grain_prop_cfg, type == "join" & property == "size", select = value1)))
+start_size <- as.numeric(unlist(subset(grain_prop_cfg, type == "start" & property == "size", select = value1)))
+end_size <- as.numeric(unlist(subset(grain_prop_cfg, type == "end" & property == "size", select = value1)))
+task_size <- as.numeric(unlist(subset(grain_prop_cfg, type == "fragment" & property == "size", select = value1)))
+task_size_mult <- as.numeric(unlist(subset(grain_prop_cfg, type == "fragment" & property == "mult", select = value1)))
+task_size_bins <- as.numeric(unlist(subset(grain_prop_cfg, type == "fragment" & property == "bins", select = value1)))
+
+# Grain shapes
+fork_shape <- as.character(unlist(subset(grain_prop_cfg, type == "fork" & property == "shape", select = value1)))
+join_shape <- as.character(unlist(subset(grain_prop_cfg, type == "join" & property == "shape", select = value1)))
+start_shape <- as.character(unlist(subset(grain_prop_cfg, type == "start" & property == "shape", select = value1)))
+end_shape <- as.character(unlist(subset(grain_prop_cfg, type == "end" & property == "shape", select = value1)))
+task_shape <- as.character(unlist(subset(grain_prop_cfg, type == "fragment" & property == "shape", select = value1)))
+
+# Grain colors
+fork_color <- as.character(unlist(subset(grain_prop_cfg, type == "fork" & property == "color", select = value1)))
+join_color <- as.character(unlist(subset(grain_prop_cfg, type == "join" & property == "color", select = value1)))
+start_color <- as.character(unlist(subset(grain_prop_cfg, type == "start" & property == "color", select = value1)))
+end_color <- as.character(unlist(subset(grain_prop_cfg, type == "end" & property == "color", select = value1)))
+task_color <- as.character(unlist(subset(grain_prop_cfg, type == "fragment" & property == "color", select = value1)))
+color_fun <- colorRampPalette(as.character(unlist(subset(grain_prop_cfg, type == "fragment" & property == "color_gradient", select = c(value1,value2)))))
+task_color_bins <- as.numeric(unlist(subset(grain_prop_cfg, type == "fragment" & property == "bins", select = value1)))
+task_color_pal <- color_fun(task_color_bins)
+
+# Edge properties
+create_edge_color <- as.character(unlist(subset(edge_prop_cfg, type == "create" & property == "color", select = value1)))
+sync_edge_color <- as.character(unlist(subset(edge_prop_cfg, type == "sync" & property == "color", select = value1)))
+scope_edge_color <- as.character(unlist(subset(edge_prop_cfg, type == "scope" & property == "color", select = value1)))
+cont_edge_color <- as.character(unlist(subset(edge_prop_cfg, type == "continuation" & property == "color", select = value1)))
+temp <- as.character(unlist(subset(edge_prop_cfg, type == "common" & property == "weight", select = value1)))
+path_weight <- substr(temp, 2, nchar(temp) - 1)
+
 # Read data
 tg_data <- read.csv(parsed$data, header=TRUE)
 
@@ -72,47 +90,9 @@ sink()
 # Remove background task
 tg_data <- tg_data[!is.na(tg_data$parent),]
 
-# Critical path calculation weight
-if ("ins_count" %in% colnames(tg_data)) {
-    path_weight <- "ins_count"
-} else if ("work_cycles" %in% colnames(tg_data)) {
-    path_weight <- "work_cycles"
-} else if ("exec_cycles" %in% colnames(tg_data)) {
-    path_weight <- "exec_cycles"
-} else {
+# Path weight avaiability
+if (path_weight %in% colnames(tg_data))
     path_weight <- NA
-}
-
-# Set colors
-join_color <- "#FF7F50"  # coral
-fork_color <- "#2E8B57"  # seagreen
-task_color <- "#4682B4" #steelblue
-other_color <- "#DEB887" # burlywood
-create_edge_color <- fork_color
-sync_edge_color <- join_color
-scope_edge_color <- "#000000"
-cont_edge_color <- "#000000"
-color_fun <- colorRampPalette(c("yellow", "orange"))
-
-if (parsed$palette == "gray") {
-    join_color <- "#D3D3D3"  # light gray
-    fork_color <- "#D3D3D3"  # light gray
-    task_color <- "#6B6B6B"  # gray42
-    other_color <- "#D3D3D3" # light gray
-    create_edge_color <- "#000000"
-    sync_edge_color <- "#000000"
-    scope_edge_color <-  "#000000"
-    cont_edge_color <- "#000000"
-    color_fun <- colorRampPalette(c("gray10", "gray90"))
-} else if (parsed$palette != "color") {
-    my_print("Unsupported color format. Supported formats: color, gray. Defaulting to color.")
-}
-
-# Task color binning
-task_color_bins <- 10
-task_color_pal <- color_fun(task_color_bins)
-fork_color_bins <- 10
-fork_color_pal <- color_fun(fork_color_bins)
 
 if (parsed$verbose) my_print("Creating graph ...")
 
@@ -349,14 +329,14 @@ for(attrib in attrib_color_distinct) {
 
 # Set label and color of 'task 0'
 start_index <- V(tg)$name == '0'
-tg <- set.vertex.attribute(tg, name='color', index=start_index, value=other_color)
+tg <- set.vertex.attribute(tg, name='color', index=start_index, value=start_color)
 tg <- set.vertex.attribute(tg, name='label', index=start_index, value='S')
 tg <- set.vertex.attribute(tg, name='size', index=start_index, value=start_size)
 tg <- set.vertex.attribute(tg, name='shape', index=start_index, value=start_shape)
 
 # Set label and color of 'task E'
 end_index <- V(tg)$name == "E"
-tg <- set.vertex.attribute(tg, name='color', index=end_index, value=other_color)
+tg <- set.vertex.attribute(tg, name='color', index=end_index, value=end_color)
 tg <- set.vertex.attribute(tg, name='label', index=end_index, value='E')
 tg <- set.vertex.attribute(tg, name='size', index=end_index, value=end_size)
 tg <- set.vertex.attribute(tg, name='shape', index=end_index, value=end_shape)
