@@ -495,7 +495,7 @@ my_print()
 sink()
 
 # Write grain graph to file
-if (cl_args$verbose) my_print("Writing grain graph files ...")
+if (cl_args$verbose) my_print("Writing grain graph to various file formats ...")
 
 ## Layout in Sugiyama style and write to PDF
 if (cl_args$layout) {
