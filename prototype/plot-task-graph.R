@@ -415,7 +415,7 @@ if (!is.na(path_weight)) {
         # TODO: Make variable names in this block meaningfull.
         num_vertices <- length(V(grain_graph))
         if (cl_args$verbose) {
-            pb <- txtProgressBar(min = 0, max = num_vertices, style = 3)
+            progress_bar <- txtProgressBar(min = 0, max = num_vertices, style = 3)
             ctr <- 0
         }
         # Topological sort
@@ -448,7 +448,7 @@ if (!is.na(path_weight)) {
             graph_vertices$depth[node] <- max(graph_vertices$depth[adjacent_nodes]) + 1
             if (cl_args$verbose) {
                 ctr <- ctr + 1
-                setTxtProgressBar(pb, ctr)
+                setTxtProgressBar(progress_bar, ctr)
             }
         }
         ## Longest path is the largest root distance
@@ -465,8 +465,8 @@ if (!is.na(path_weight)) {
         grain_graph <- set.edge.attribute(grain_graph, name="on_crit_path", index=critical_edges, value=1)
         if (cl_args$verbose) {
             ctr <- ctr + 1
-            setTxtProgressBar(pb, ctr)
-            close(pb)
+            setTxtProgressBar(progress_bar, ctr)
+            close(progress_bar)
         }
     }
     #Rprof(NULL)
