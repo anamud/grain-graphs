@@ -89,8 +89,10 @@ sink()
 prof_data <- prof_data[!is.na(prof_data$parent),]
 
 # Path weight avaiability
-if (path_weight %in% colnames(prof_data))
+if (!(path_weight %in% colnames(prof_data))) {
+    my_print(paste("Path weight variable", path_weight, "not found in profiling data!"))
     path_weight <- NA
+}
 
 if (cl_args$forloop) {
     # Remove idle task without children
