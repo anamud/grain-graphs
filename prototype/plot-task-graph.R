@@ -22,6 +22,7 @@ if (Rstudio_mode) {
     option_list <- list(make_option(c("-d","--data"), help = "Task stats.", metavar="FILE"),
                         make_option(c("-o","--out"), default="task-graph", help = "Output file suffix [default \"%default\"].", metavar="STRING"),
                         make_option(c("--enumcriticalpath"), action="store_true", default=FALSE, help="Enumerate critical path."),
+                        make_option(c("--forloop"), action="store_true", default=FALSE, help="Task stats obtained from a for-loop program."),
                         make_option(c("--showproblems"), action="store_true", default=FALSE, help="Analyze graph for problems."),
                         make_option(c("--grainproblemconfig"), default="grain-problems.cfg", help = "Grain problem configuration file [default \"%default\"].", metavar="FILE"),
                         make_option(c("--grainpropertyconfig"), default="grain-properties.cfg", help = "Grain property configuration file [default \"%default\"].", metavar="FILE"),
@@ -93,6 +94,11 @@ tg_data <- tg_data[!is.na(tg_data$parent),]
 # Path weight avaiability
 if (path_weight %in% colnames(tg_data))
     path_weight <- NA
+
+if (cl_args$forloop) {
+    # Remove idle task without children
+    tg_data <- tg_data[!(tg_data$tag == "idle_task" & tg_data$num_children == 0),]
+}
 
 if (cl_args$verbose) my_print("Creating graph ...")
 
@@ -261,7 +267,12 @@ tg <- set.vertex.attribute(tg, name='color', index=task_index, value=task_color)
 
 # Scale color to attributes
 # "-" in attribute name implies higher is better
-attrib_color_scaled <- c("mem_fp", "-compute_int", "PAPI_RES_STL_sum", "-mem_hier_util", "work_deviation", "overhead_deviation", "-parallel_benefit", "-min_shape_contrib", "-max_shape_contrib","-median_shape_contrib", "sibling_work_balance", "sibling_scatter")
+attrib_color_scaled <- c("mem_fp", "-compute_int", "PAPI_RES_STL_sum", "-mem_hier_util", "work_deviation", "overhead_deviation", "-parallel_benefit", "-min_shape_contrib", "-max_shape_contrib","-median_shape_contrib", "sibling_work_balance")
+if (!cl_args$forloop) {
+    attrib_color_scaled <- c(attrib_color_scaled, c("sibling_scatter"))
+} else {
+    attrib_color_scaled <- c(attrib_color_scaled, c("chunk_work_balance", "chunk_work_cpu_balance"))
+}
 for(attrib in attrib_color_scaled) {
     invert_colors <- F
     if (substring(attrib, 1, 1) == "-") {
@@ -937,70 +948,138 @@ if (cl_args$showproblems) {
         my_print(paste("Wrote file:", tg_out_file))
     }# }}}
 
-    # Sibling work balance problem
-    if ("sibling_work_balance" %in% colnames(tg_data)) {# {{{
-        prob_tg <- base_tg
-        sibling_work_balance_thresh <- 2
-        prob_task <- subset(tg_data, sibling_work_balance > sibling_work_balance_thresh, select=task)
-
-        sink(tg_problem_out_file, append=T)
-        my_print(paste(length(prob_task$task), "tasks have sibling_work_balance >", sibling_work_balance_thresh))
-        sink()
-
-        if (cl_args$enumcriticalpath) {
-            prob_task_critical <- subset(tg_df, sibling_work_balance > sibling_work_balance_thresh & on_crit_path == 1, select=task)
+    if(!cl_args$forloop) {
+        # Sibling work balance problem
+        if ("sibling_work_balance" %in% colnames(tg_data)) {# {{{
+            prob_tg <- base_tg
+            sibling_work_balance_thresh <- 2
+            prob_task <- subset(tg_data, sibling_work_balance > sibling_work_balance_thresh, select=task)
 
             sink(tg_problem_out_file, append=T)
-            my_print(paste("    ", length(prob_task_critical$task), " of which are on the critical path."))
+            my_print(paste(length(prob_task$task), "tasks have sibling_work_balance >", sibling_work_balance_thresh))
             sink()
-        }
 
-        sink(tg_problem_out_file, append=T)
-        my_print()
-        sink()
+            if (cl_args$enumcriticalpath) {
+                prob_task_critical <- subset(tg_df, sibling_work_balance > sibling_work_balance_thresh & on_crit_path == 1, select=task)
 
-        prob_task_index <- match(as.character(prob_task$task), V(prob_tg)$name)
-        prob_task_color <- get.vertex.attribute(prob_tg, name='sibling_work_balance_to_color', index=prob_task_index)
-        prob_tg <- set.vertex.attribute(prob_tg, name='color', index=prob_task_index, value=prob_task_color)
-        prob_tg <- set.vertex.attribute(prob_tg, name='problematic', index=prob_task_index, value=1)
-
-        tg_out_file <- paste(gsub(". $", "", cl_args$out), "-problem-sibling-work-balance.graphml", sep="")
-        res <- write.graph(prob_tg, file=tg_out_file, format="graphml")
-        my_print(paste("Wrote file:", tg_out_file))
-    }# }}}
-
-    # Sibling scatter problem
-    if ("sibling_scatter" %in% colnames(tg_data)) {# {{{
-        prob_tg <- base_tg
-        sibling_scatter_thresh <- (length(unique(tg_data$cpu_id))/4)
-        prob_task <- subset(tg_data, sibling_scatter > sibling_scatter_thresh, select=task)
-
-        sink(tg_problem_out_file, append=T)
-        my_print(paste(length(prob_task$task), "tasks have sibling_scatter >", sibling_scatter_thresh))
-        sink()
-
-        if (cl_args$enumcriticalpath) {
-            prob_task_critical <- subset(tg_df, sibling_scatter > sibling_scatter_thresh & on_crit_path == 1, select=task)
+                sink(tg_problem_out_file, append=T)
+                my_print(paste("    ", length(prob_task_critical$task), " of which are on the critical path."))
+                sink()
+            }
 
             sink(tg_problem_out_file, append=T)
-            my_print(paste("    ", length(prob_task_critical$task), " of which are on the critical path."))
+            my_print()
             sink()
-        }
 
-        sink(tg_problem_out_file, append=T)
-        my_print()
-        sink()
+            prob_task_index <- match(as.character(prob_task$task), V(prob_tg)$name)
+            prob_task_color <- get.vertex.attribute(prob_tg, name='sibling_work_balance_to_color', index=prob_task_index)
+            prob_tg <- set.vertex.attribute(prob_tg, name='color', index=prob_task_index, value=prob_task_color)
+            prob_tg <- set.vertex.attribute(prob_tg, name='problematic', index=prob_task_index, value=1)
 
-        prob_task_index <- match(as.character(prob_task$task), V(prob_tg)$name)
-        #prob_task_color <- get.vertex.attribute(prob_tg, name='sibling_scatter_to_color', index=prob_task_index)
-        prob_task_color <- get.vertex.attribute(prob_tg, name='cpu_id_to_color', index=prob_task_index)
-        prob_tg <- set.vertex.attribute(prob_tg, name='color', index=prob_task_index, value=prob_task_color)
-        prob_tg <- set.vertex.attribute(prob_tg, name='problematic', index=prob_task_index, value=1)
+            tg_out_file <- paste(gsub(". $", "", cl_args$out), "-problem-sibling-work-balance.graphml", sep="")
+            res <- write.graph(prob_tg, file=tg_out_file, format="graphml")
+            my_print(paste("Wrote file:", tg_out_file))
+        }# }}}
 
-        tg_out_file <- paste(gsub(". $", "", cl_args$out), "-problem-sibling-scatter.graphml", sep="")
-        res <- write.graph(prob_tg, file=tg_out_file, format="graphml")
-        my_print(paste("Wrote file:", tg_out_file))
-    }# }}}
+        # Sibling scatter problem
+        if ("sibling_scatter" %in% colnames(tg_data)) {# {{{
+            prob_tg <- base_tg
+            sibling_scatter_thresh <- (length(unique(tg_data$cpu_id))/4)
+            prob_task <- subset(tg_data, sibling_scatter > sibling_scatter_thresh, select=task)
+
+            sink(tg_problem_out_file, append=T)
+            my_print(paste(length(prob_task$task), "tasks have sibling_scatter >", sibling_scatter_thresh))
+            sink()
+
+            if (cl_args$enumcriticalpath) {
+                prob_task_critical <- subset(tg_df, sibling_scatter > sibling_scatter_thresh & on_crit_path == 1, select=task)
+
+                sink(tg_problem_out_file, append=T)
+                my_print(paste("    ", length(prob_task_critical$task), " of which are on the critical path."))
+                sink()
+            }
+
+            sink(tg_problem_out_file, append=T)
+            my_print()
+            sink()
+
+            prob_task_index <- match(as.character(prob_task$task), V(prob_tg)$name)
+            #prob_task_color <- get.vertex.attribute(prob_tg, name='sibling_scatter_to_color', index=prob_task_index)
+            prob_task_color <- get.vertex.attribute(prob_tg, name='cpu_id_to_color', index=prob_task_index)
+            prob_tg <- set.vertex.attribute(prob_tg, name='color', index=prob_task_index, value=prob_task_color)
+            prob_tg <- set.vertex.attribute(prob_tg, name='problematic', index=prob_task_index, value=1)
+
+            tg_out_file <- paste(gsub(". $", "", cl_args$out), "-problem-sibling-scatter.graphml", sep="")
+            res <- write.graph(prob_tg, file=tg_out_file, format="graphml")
+            my_print(paste("Wrote file:", tg_out_file))
+        }# }}}
+    }
+
+    if(cl_args$forloop) {
+        # Chunk work balance problem
+        if ("chunk_work_balance" %in% colnames(tg_data)) {# {{{
+            prob_tg <- base_tg
+            chunk_work_balance_thresh <- 2
+            prob_task <- subset(tg_data, !is.na(chunk_work_balance) & chunk_work_balance > chunk_work_balance_thresh, select=task)
+
+            sink(tg_analysis_out_file, append=T)
+            my_print(paste(length(prob_task$task), "tasks have chunk_work_balance >", chunk_work_balance_thresh))
+            sink()
+
+            if (!parsed$cplengthonly) {
+                prob_task_critical <- subset(tg_df, !is.na(chunk_work_balance) & chunk_work_balance > chunk_work_balance_thresh & on_crit_path == 1, select=task)
+
+                sink(tg_analysis_out_file, append=T)
+                my_print(paste("    ", length(prob_task_critical$task), " of which are on the critical path."))
+                sink()
+            }
+
+            sink(tg_analysis_out_file, append=T)
+            my_print()
+            sink()
+
+            prob_task_index <- match(as.character(prob_task$task), V(prob_tg)$name)
+            prob_task_color <- get.vertex.attribute(prob_tg, name='chunk_work_balance_to_color', index=prob_task_index)
+            prob_tg <- set.vertex.attribute(prob_tg, name='color', index=prob_task_index, value=prob_task_color)
+            prob_tg <- set.vertex.attribute(prob_tg, name='problematic', index=prob_task_index, value=1)
+
+            tg_out_file <- paste(gsub(". $", "", parsed$out), "-problem-chunk-work-balance.graphml", sep="")
+            res <- write.graph(prob_tg, file=tg_out_file, format="graphml")
+            my_print(paste("Wrote file:", tg_out_file))
+        }# }}}
+
+        # Chunk work CPU balance problem
+        if ("chunk_work_cpu_balance" %in% colnames(tg_data)) {# {{{
+            prob_tg <- base_tg
+            chunk_work_cpu_balance_thresh <- 2
+            prob_task <- subset(tg_data, !is.na(chunk_work_cpu_balance) & chunk_work_cpu_balance > chunk_work_cpu_balance_thresh, select=task)
+
+            sink(tg_analysis_out_file, append=T)
+            my_print(paste(length(prob_task$task), "tasks have chunk_work_cpu_balance >", chunk_work_cpu_balance_thresh))
+            sink()
+
+            if (!parsed$cplengthonly) {
+                prob_task_critical <- subset(tg_df, !is.na(chunk_work_cpu_balance) & chunk_work_cpu_balance > chunk_work_cpu_balance_thresh & on_crit_path == 1, select=task)
+
+                sink(tg_analysis_out_file, append=T)
+                my_print(paste("    ", length(prob_task_critical$task), " of which are on the critical path."))
+                sink()
+            }
+
+            sink(tg_analysis_out_file, append=T)
+            my_print()
+            sink()
+
+            prob_task_index <- match(as.character(prob_task$task), V(prob_tg)$name)
+            prob_task_color <- get.vertex.attribute(prob_tg, name='chunk_work_cpu_balance_to_color', index=prob_task_index)
+            prob_tg <- set.vertex.attribute(prob_tg, name='color', index=prob_task_index, value=prob_task_color)
+            prob_tg <- set.vertex.attribute(prob_tg, name='problematic', index=prob_task_index, value=1)
+
+            tg_out_file <- paste(gsub(". $", "", parsed$out), "-problem-chunk-work-cpu-balance.graphml", sep="")
+            res <- write.graph(prob_tg, file=tg_out_file, format="graphml")
+            my_print(paste("Wrote file:", tg_out_file))
+        }# }}}
+    }
 
     my_print(paste("Wrote file:", tg_problem_out_file))
     if (cl_args$timing) toc("Analyzing graph for problems")
