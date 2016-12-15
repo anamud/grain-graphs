@@ -9,7 +9,7 @@ source(paste(mir_root,"/prototype/common.R",sep=""))
 Rstudio_mode <- F
 if (Rstudio_mode) {
     cl_args <- list(data="task-stats.processed",
-                   out="task-graph",
+                   out="grain-graph",
                    enumcriticalpath=F,
                    grainpropertyconfig="grain-properties.cfg",
                    edgepropertyconfig="edge-properties.cfg",
@@ -18,7 +18,7 @@ if (Rstudio_mode) {
                    layout=F)
 } else {
     option_list <- list(make_option(c("-d","--data"), help = "Task stats.", metavar="FILE"),
-                        make_option(c("-o","--out"), default="task-graph", help = "Output file suffix [default \"%default\"].", metavar="STRING"),
+                        make_option(c("-o","--out"), default="grain-graph", help = "Output file suffix [default \"%default\"].", metavar="STRING"),
                         make_option(c("--enumcriticalpath"), action="store_true", default=FALSE, help="Enumerate critical path."),
                         make_option(c("--forloop"), action="store_true", default=FALSE, help="Task stats obtained from a for-loop program."),
                         make_option(c("--grainpropertyconfig"), default="grain-properties.cfg", help = "Grain property configuration file [default \"%default\"].", metavar="FILE"),
