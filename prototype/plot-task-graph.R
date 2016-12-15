@@ -18,12 +18,12 @@ if (Rstudio_mode) {
                    verbose=T,
                    timing=F)
 } else {
-    option_list <- list(make_option(c("-d","--data"), help = "Task stats.", metavar="FILE"),
+    option_list <- list(make_option(c("-d","--data"), help = "Task profiling data.", metavar="FILE"),
                         make_option(c("--grainpropertyconfig"), default="grain-properties.cfg", help = "Grain property configuration file [default \"%default\"].", metavar="FILE"),
                         make_option(c("--edgepropertyconfig"), default="edge-properties.cfg", help = "Edge property configuration file [default \"%default\"].", metavar="FILE"),
                         make_option(c("-o","--out"), default="grain-graph", help = "Output file suffix [default \"%default\"].", metavar="STRING"),
                         make_option(c("--enumcriticalpath"), action="store_true", default=FALSE, help="Enumerate critical path."),
-                        make_option(c("--forloop"), action="store_true", default=FALSE, help="Task stats obtained from a for-loop program."),
+                        make_option(c("--forloop"), action="store_true", default=FALSE, help="Task profiling data obtained from a for-loop program."),
                         make_option(c("--layout"), action="store_true", default=FALSE, help="Layout using Sugiyama style and plot to PDF."),
                         make_option(c("--verbose"), action="store_true", default=TRUE, help="Print output [default]."),
                         make_option(c("--quiet"), action="store_false", dest="verbose", help="Print little output."),
