@@ -430,8 +430,8 @@ if (!is.na(path_weight)) {
         for(node in top_sort_graph[-1])
         {
             # Get distance from node's predecessors
-            ni <- incident(grain_graph, node, mode="in")
-            w <- -E(grain_graph)[ni]$weight
+            incident_edges <- incident(grain_graph, node, mode="in")
+            w <- -E(grain_graph)[incident_edges]$weight
             # Get distance from root to node's predecessors
             nn <- neighbors(grain_graph, node, mode="in")
             d <- graph_vertices$root_dist[nn]
