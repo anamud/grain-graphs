@@ -133,7 +133,7 @@ if (cl_args$timing) toc("Graph creation")
 if (cl_args$verbose) my_print("Connecting nodes ...")
 if (cl_args$timing) tic(type="elapsed")
 
-tg[from=fork_nodes, to=tg_data$task, attr='kind'] <- 'create'
+tg[from=fork_nodes, to=tg_data$task, attr='type'] <- 'create'
 tg[from=fork_nodes, to=tg_data$task, attr='color'] <- create_edge_color
 
 if (cl_args$timing) toc("Connect parent fork to task")
@@ -145,7 +145,7 @@ first_forks_index <- which(grepl("f.[0-9]+.0$", fork_nodes_unique))
 parent_first_forks <- as.vector(sapply(fork_nodes_unique[first_forks_index], function(x) {gsub('f.(.*)\\.+.*','\\1', x)}))
 first_forks <- fork_nodes_unique[first_forks_index]
 
-tg[to=first_forks, from=parent_first_forks, attr='kind'] <- 'scope'
+tg[to=first_forks, from=parent_first_forks, attr='type'] <- 'scope'
 tg[to=first_forks, from=parent_first_forks, attr='color'] <- scope_edge_color
 
 if (!is.na(path_weight)) {
@@ -163,7 +163,7 @@ if (cl_args$timing) tic(type="elapsed")
 leaf_tasks <- tg_data$task[tg_data$leaf == T]
 leaf_join_nodes <- join_nodes[match(leaf_tasks, tg_data$task)]
 
-tg[from=leaf_tasks, to=leaf_join_nodes, attr='kind'] <- 'sync'
+tg[from=leaf_tasks, to=leaf_join_nodes, attr='type'] <- 'sync'
 tg[from=leaf_tasks, to=leaf_join_nodes, attr='color'] <- sync_edge_color
 
 if (!is.na(path_weight)) {
@@ -209,7 +209,7 @@ find_next_fork <- function(node)
 
 next_forks <- as.vector(sapply(join_nodes_unique, find_next_fork))
 
-tg[from=join_nodes_unique, to=next_forks, attr='kind'] <- 'continue'
+tg[from=join_nodes_unique, to=next_forks, attr='type'] <- 'continue'
 tg[from=join_nodes_unique, to=next_forks, attr='color'] <- cont_edge_color
 
 #Rprof(NULL)
