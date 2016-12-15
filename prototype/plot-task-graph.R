@@ -471,16 +471,6 @@ if (!is.na(path_weight)) {
     }
     #Rprof(NULL)
 
-    # Calculate and write info
-    sink(grain_graph_info_out_file, append=T)
-    my_print(paste("# Cilk theory parallelism (unit =", path_weight, "):", sep=""))
-    my_print(paste("Span (critical path) =", lpl))
-    work <- sum(as.numeric(prof_data[,path_weight]))
-    my_print(paste("Work =", work))
-    my_print(paste("Parallelism (Work/Span) =", work/lpl))
-    my_print()
-    sink()
-
     # Shape calculation
     if (cl_args$enumcriticalpath) {
         # Clear rpath since dot/table writing complains
@@ -514,11 +504,16 @@ my_print("# Grain graph structure:")
 my_print(paste("Number of nodes =", length(V(grain_graph))))
 my_print(paste("Number of edges =", length(E(grain_graph))))
 my_print(paste("Number of tasks =", length(prof_data$task)))
-if (cl_args$enumcriticalpath)
-    my_print(paste("Number of critical tasks =", length(grain_graph_df$task[grain_graph_df$on_crit_path == 1])))
 my_print(paste("Number of forks =", length(fork_nodes_unique)))
 my_print("Out-degree distribution of forks:")
 degree.distribution(grain_graph, v=fork_nodes_index, mode="out")
+my_print(paste("# Cilk theory parallelism (metric =", path_weight, "):", sep=""))
+my_print(paste("Span (critical path) =", lpl))
+work <- sum(as.numeric(prof_data[,path_weight]))
+my_print(paste("Work =", work))
+my_print(paste("Parallelism (Work/Span) =", work/lpl))
+if (cl_args$enumcriticalpath)
+    my_print(paste("Number of critical tasks =", length(grain_graph_df$task[grain_graph_df$on_crit_path == 1])))
 my_print()
 sink()
 
