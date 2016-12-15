@@ -454,9 +454,9 @@ if (!is.na(path_weight)) {
         ## Longest path is the largest root distance
         critical_path <- max(graph_vertices$root_dist)
         # Enumerate longest path
-        lpm <- unlist(graph_vertices$root_path[match(critical_path,graph_vertices$root_dist)])
+        critical_nodes <- unlist(graph_vertices$root_path[match(critical_path,graph_vertices$root_dist)])
         graph_vertices$on_crit_path <- 0
-        graph_vertices$on_crit_path[lpm] <- 1
+        graph_vertices$on_crit_path[critical_nodes] <- 1
         # Set back on grain_graph
         grain_graph <- set.vertex.attribute(grain_graph, name="on_crit_path", index=V(grain_graph), value=graph_vertices$on_crit_path)
         grain_graph <- set.vertex.attribute(grain_graph, name="root_dist", index=V(grain_graph), value=graph_vertices$root_dist)
