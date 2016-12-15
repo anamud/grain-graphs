@@ -97,7 +97,7 @@ if (cl_args$forloop) {
     prof_data <- prof_data[!(prof_data$tag == "idle_task" & prof_data$num_children == 0),]
 }
 
-if (cl_args$verbose) my_print("Creating grain_graph ...")
+if (cl_args$verbose) my_print("Creating grain graph ...")
 
 # Create node lists
 if (cl_args$timing) tic(type="elapsed")
@@ -115,7 +115,7 @@ fork_nodes_unique <- unique(unlist(fork_nodes, use.names=FALSE))
 
 if (cl_args$timing) toc("Node list creation")
 
-# Create grain_graph
+# Create grain graph
 if (cl_args$timing) tic(type="elapsed")
 
 grain_graph <- graph.empty(directed=TRUE) + vertices('E',
@@ -124,7 +124,7 @@ grain_graph <- graph.empty(directed=TRUE) + vertices('E',
                                                      parent_nodes_unique,
                                                      prof_data$task)))
 
-if (cl_args$timing) toc("grain_graph creation")
+if (cl_args$timing) toc("grain graph creation")
 
 # Connect parent fork to task
 if (cl_args$verbose) my_print("Connecting nodes ...")
