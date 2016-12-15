@@ -425,7 +425,7 @@ if (!is.na(path_weight)) {
         V(grain_graph)[top_sort_graph[1]]$depth <- 0
         V(grain_graph)[top_sort_graph[1]]$root_path <- top_sort_graph[1]
         # Get data frame of grain_graph object
-        vgdf <- get.data.frame(grain_graph, what="vertices")
+        graph_vertices <- get.data.frame(grain_graph, what="vertices")
         # Get longest paths from root
         for(node in top_sort_graph[-1])
         {
@@ -434,33 +434,33 @@ if (!is.na(path_weight)) {
             w <- -E(grain_graph)[ni]$weight
             # Get distance from root to node's predecessors
             nn <- neighbors(grain_graph, node, mode="in")
-            d <- vgdf$root_dist[nn]
+            d <- graph_vertices$root_dist[nn]
             # Add distances (assuming one-one corr.)
             wd <- w+d
             # Set node's distance from root to max of added distances
             mwd <- max(wd)
-            vgdf$root_dist[node] <- mwd
+            graph_vertices$root_dist[node] <- mwd
             # Set node's path from root to path of max of added distances
             mwdn <- as.vector(nn)[match(mwd,wd)]
-            nrp <- list(c(unlist(vgdf$root_path[mwdn]), node))
-            vgdf$root_path[node] <- nrp
+            nrp <- list(c(unlist(graph_vertices$root_path[mwdn]), node))
+            graph_vertices$root_path[node] <- nrp
             # Set node's depth as one greater than the largest depth its predecessors
-            vgdf$depth[node] <- max(vgdf$depth[nn]) + 1
+            graph_vertices$depth[node] <- max(graph_vertices$depth[nn]) + 1
             if (cl_args$verbose) {
                 ctr <- ctr + 1
                 setTxtProgressBar(pb, ctr)
             }
         }
         ## Longest path is the largest root distance
-        critical_path <- max(vgdf$root_dist)
+        critical_path <- max(graph_vertices$root_dist)
         # Enumerate longest path
-        lpm <- unlist(vgdf$root_path[match(critical_path,vgdf$root_dist)])
-        vgdf$on_crit_path <- 0
-        vgdf$on_crit_path[lpm] <- 1
+        lpm <- unlist(graph_vertices$root_path[match(critical_path,graph_vertices$root_dist)])
+        graph_vertices$on_crit_path <- 0
+        graph_vertices$on_crit_path[lpm] <- 1
         # Set back on grain_graph
-        grain_graph <- set.vertex.attribute(grain_graph, name="on_crit_path", index=V(grain_graph), value=vgdf$on_crit_path)
-        grain_graph <- set.vertex.attribute(grain_graph, name="root_dist", index=V(grain_graph), value=vgdf$root_dist)
-        grain_graph <- set.vertex.attribute(grain_graph, name="depth", index=V(grain_graph), value=vgdf$depth)
+        grain_graph <- set.vertex.attribute(grain_graph, name="on_crit_path", index=V(grain_graph), value=graph_vertices$on_crit_path)
+        grain_graph <- set.vertex.attribute(grain_graph, name="root_dist", index=V(grain_graph), value=graph_vertices$root_dist)
+        grain_graph <- set.vertex.attribute(grain_graph, name="depth", index=V(grain_graph), value=graph_vertices$depth)
         critical_edges <- E(grain_graph)[V(grain_graph)[on_crit_path==1] %--% V(grain_graph)[on_crit_path==1]]
         grain_graph <- set.edge.attribute(grain_graph, name="on_crit_path", index=critical_edges, value=1)
         if (cl_args$verbose) {
