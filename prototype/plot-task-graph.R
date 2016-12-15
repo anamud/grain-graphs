@@ -302,16 +302,16 @@ for(attrib in attrib_color_scaled) {
         grain_graph <- set.vertex.attribute(grain_graph, name=annot_name, index=task_index, value=p_task_color)
 
         # Write colors for reference
-        grain_graph_out_file <- paste(gsub(". $", "", cl_args$out), annot_name, sep=".")
+        temp_out_file <- paste(gsub(". $", "", cl_args$out), annot_name, sep=".")
         if (length(attrib_unique) == 1) {
-            write.csv(data.frame(value=attrib_unique, color=p_task_color), grain_graph_out_file, row.names=F)
+            write.csv(data.frame(value=attrib_unique, color=p_task_color), temp_out_file, row.names=F)
         } else if(length(attrib_unique) == 2 & identical(c(0,NA), as.numeric(attrib_unique[order(attrib_unique)]))) {
-            write.csv(data.frame(value=attrib_unique, color=p_task_color), grain_graph_out_file, row.names=F)
+            write.csv(data.frame(value=attrib_unique, color=p_task_color), temp_out_file, row.names=F)
         } else {
             v <- unique(cut(prof_data[,attrib], task_color_bins))
-            write.csv(data.frame(value=v, color=task_color_pal[as.numeric(v)]), grain_graph_out_file, row.names=F)
+            write.csv(data.frame(value=v, color=task_color_pal[as.numeric(v)]), temp_out_file, row.names=F)
         }
-        my_print(paste("Wrote file:", grain_graph_out_file))
+        my_print(paste("Wrote file:", temp_out_file))
     }
 }
 
@@ -329,9 +329,9 @@ for(attrib in attrib_color_distinct) {
         grain_graph <- set.vertex.attribute(grain_graph, name=annot_name, index=task_index, value=attrib_color[match(attrib_val, unique_attrib_val)])
 
         # Write colors for reference
-        grain_graph_out_file <- paste(gsub(". $", "", cl_args$out), annot_name, sep=".")
-        write.csv(data.frame(value=unique_attrib_val, color=attrib_color), grain_graph_out_file, row.names=F)
-        my_print(paste("Wrote file:", grain_graph_out_file))
+        temp_out_file <- paste(gsub(". $", "", cl_args$out), annot_name, sep=".")
+        write.csv(data.frame(value=unique_attrib_val, color=attrib_color), temp_out_file, row.names=F)
+        my_print(paste("Wrote file:", temp_out_file))
     }
 }
 
@@ -496,14 +496,14 @@ if (!is.na(path_weight)) {
         grain_graph_shape <- hist(grain_graph_df$rdist, breaks=grain_graph_shape_breaks, plot=F)
 
         # Write out shape
-        grain_graph_out_file <- paste(gsub(". $", "", cl_args$out), "-shape.pdf", sep="")
-        pdf(grain_graph_out_file)
+        temp_out_file <- paste(gsub(". $", "", cl_args$out), "-shape.pdf", sep="")
+        pdf(temp_out_file)
         plot(grain_graph_shape, freq=T, xlab=paste("Elapsed ", path_weight), ylab="Tasks", main="Instantaneous task parallelism", col="white")
         abline(h = length(unique(prof_data$cpu_id)), col = "blue", lty=2)
         abline(h = work/lpl , col = "red", lty=1)
         legend("top", legend = c("Number of cores", "Exposed task parallelism"), fill = c("blue", "red"))
         dev.off()
-        my_print(paste("Wrote file:", grain_graph_out_file))
+        my_print(paste("Wrote file:", temp_out_file))
     }
     if (cl_args$timing) toc("Critical path calculation")
 }
@@ -528,32 +528,32 @@ if (cl_args$verbose) my_print("Writing grain graph files ...")
 ## Layout in Sugiyama style and write to PDF
 if (cl_args$layout) {
     if (cl_args$timing) tic(type="elapsed")
-    grain_graph_out_file <- paste(gsub(". $", "", cl_args$out), ".pdf", sep="")
+    temp_out_file <- paste(gsub(". $", "", cl_args$out), ".pdf", sep="")
     lyt <- layout_with_sugiyama(grain_graph, attributes="all")
-    pdf(grain_graph_out_file)
+    pdf(temp_out_file)
     res <- plot(grain_graph, layout=lyt$layout)
     res <- dev.off()
-    my_print(paste("Wrote file:", grain_graph_out_file))
+    my_print(paste("Wrote file:", temp_out_file))
     if (cl_args$timing) toc("Write Sugiyama layout PDF")
 }
 
 ## Write dot file
 #if (cl_args$timing) tic(type="elapsed")
-#grain_graph_out_file <- paste(gsub(". $", "", cl_args$out), ".dot", sep="")
-#res <- write.grain_graph(grain_graph, file=grain_graph_out_file, format="dot")
-#my_print(paste("Wrote file:", grain_graph_out_file))
+#temp_out_file <- paste(gsub(". $", "", cl_args$out), ".dot", sep="")
+#res <- write.grain_graph(grain_graph, file=temp_out_file, format="dot")
+#my_print(paste("Wrote file:", temp_out_file))
 #if (cl_args$timing) toc("Write dot")
 
 # Write gml file
 if (cl_args$timing) tic(type="elapsed")
-grain_graph_out_file <- paste(gsub(". $", "", cl_args$out), ".graphml", sep="")
-res <- write.grain_graph(grain_graph, file=grain_graph_out_file, format="graphml")
-my_print(paste("Wrote file:", grain_graph_out_file))
+temp_out_file <- paste(gsub(". $", "", cl_args$out), ".graphml", sep="")
+res <- write.grain_graph(grain_graph, file=temp_out_file, format="graphml")
+my_print(paste("Wrote file:", temp_out_file))
 if (cl_args$timing) toc("Write graphml")
 
 # Write graphml file with no attributes
 if (cl_args$timing) tic(type="elapsed")
-grain_graph_out_file <- paste(gsub(". $", "", cl_args$out), "-noattrib.graphml", sep="")
+temp_out_file <- paste(gsub(". $", "", cl_args$out), "-noattrib.graphml", sep="")
 grain_graph_noattrib <- grain_graph
 for (attrib in vertex_attr_names(grain_graph)) {
     grain_graph_noattrib <- delete_vertex_attr(grain_graph_noattrib, attrib)
@@ -561,33 +561,33 @@ for (attrib in vertex_attr_names(grain_graph)) {
 for (attrib in edge_attr_names(grain_graph)) {
     grain_graph_noattrib <- delete_edge_attr(grain_graph_noattrib, attrib)
 }
-res <- write.grain_graph(grain_graph_noattrib, file=grain_graph_out_file, format="graphml")
-my_print(paste("Wrote file:", grain_graph_out_file))
+res <- write.grain_graph(grain_graph_noattrib, file=temp_out_file, format="graphml")
+my_print(paste("Wrote file:", temp_out_file))
 if (cl_args$timing) toc("Write graphml without attributes")
 
 ## Write adjacency matrix file
 #if (cl_args$timing) tic(type="elapsed")
-#grain_graph_out_file <- paste(gsub(". $", "", cl_args$out), ".adjmat", sep="")
-#sink(grain_graph_out_file)
+#temp_out_file <- paste(gsub(". $", "", cl_args$out), ".adjmat", sep="")
+#sink(temp_out_file)
 #get.adjacency(grain_graph,names=T)
 #sink()
-#my_print(paste("Wrote file:", grain_graph_out_file))
+#my_print(paste("Wrote file:", temp_out_file))
 #if (cl_args$timing) toc("Write adjacency matrix")
 
 ## Write edgelist file
 #if (cl_args$timing) tic(type="elapsed")
-#grain_graph_out_file <- paste(gsub(". $", "", cl_args$out), ".edgelist", sep="")
-#sink(grain_graph_out_file)
+#temp_out_file <- paste(gsub(". $", "", cl_args$out), ".edgelist", sep="")
+#sink(temp_out_file)
 #get.edgelist(grain_graph, names=T)
 #sink()
-#my_print(paste("Wrote file:", grain_graph_out_file))
+#my_print(paste("Wrote file:", temp_out_file))
 #if (cl_args$timing) toc("Write edgelist")
 
 # Write node attributes
 if (cl_args$timing) tic(type="elapsed")
-grain_graph_out_file <- paste(gsub(". $", "", cl_args$out), ".nodeattr", sep="")
-write.table(get.data.frame(grain_graph, what="vertices"), sep=",", file=grain_graph_out_file)
-my_print(paste("Wrote file:", grain_graph_out_file))
+temp_out_file <- paste(gsub(". $", "", cl_args$out), ".nodeattr", sep="")
+write.table(get.data.frame(grain_graph, what="vertices"), sep=",", file=temp_out_file)
+my_print(paste("Wrote file:", temp_out_file))
 if (cl_args$timing) toc("Write node attributes")
 
 my_print(paste("Wrote file:", grain_graph_info_out_file))
