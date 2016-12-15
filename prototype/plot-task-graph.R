@@ -410,7 +410,7 @@ if (!is.na(path_weight)) {
     if (!cl_args$enumcriticalpath) {
         # Compute critical path length
         shortest_path <- shortest.paths(grain_graph, v=start_index, to=end_index, mode="out")
-        lpl <- -as.numeric(shortest_path)
+        critical_path <- -as.numeric(shortest_path)
     } else {
         # TODO: Make variable names in this block meaningfull.
         lngrain_graph <- length(V(grain_graph))
@@ -452,9 +452,9 @@ if (!is.na(path_weight)) {
             }
         }
         ## Longest path is the largest root distance
-        lpl <- max(vgdf$rdist)
+        critical_path <- max(vgdf$rdist)
         # Enumerate longest path
-        lpm <- unlist(vgdf$rpath[match(lpl,vgdf$rdist)])
+        lpm <- unlist(vgdf$rpath[match(critical_path,vgdf$rdist)])
         vgdf$on_crit_path <- 0
         vgdf$on_crit_path[lpm] <- 1
         # Set back on grain_graph
@@ -490,7 +490,7 @@ if (!is.na(path_weight)) {
         pdf(temp_out_file)
         plot(grain_graph_shape, freq=T, xlab=paste("Elapsed ", path_weight), ylab="Tasks", main="Instantaneous task parallelism", col="white")
         abline(h = length(unique(prof_data$cpu_id)), col = "blue", lty=2)
-        abline(h = work/lpl , col = "red", lty=1)
+        abline(h = work/critical_path , col = "red", lty=1)
         legend("top", legend = c("Number of cores", "Exposed task parallelism"), fill = c("blue", "red"))
         dev.off()
         my_print(paste("Wrote file:", temp_out_file))
@@ -508,10 +508,10 @@ my_print(paste("Number of forks =", length(fork_nodes_unique)))
 my_print("Out-degree distribution of forks:")
 degree.distribution(grain_graph, v=fork_nodes_index, mode="out")
 my_print(paste("# Cilk theory parallelism (metric =", path_weight, "):", sep=""))
-my_print(paste("Span (critical path) =", lpl))
+my_print(paste("Span (critical path) =", critical_path))
 work <- sum(as.numeric(prof_data[,path_weight]))
 my_print(paste("Work =", work))
-my_print(paste("Parallelism (Work/Span) =", work/lpl))
+my_print(paste("Parallelism (Work/Span) =", work/critical_path))
 if (cl_args$enumcriticalpath)
     my_print(paste("Number of critical tasks =", length(grain_graph_df$task[grain_graph_df$on_crit_path == 1])))
 my_print()
