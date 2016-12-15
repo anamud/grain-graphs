@@ -413,9 +413,9 @@ if (!is.na(path_weight)) {
         critical_path <- -as.numeric(shortest_path)
     } else {
         # TODO: Make variable names in this block meaningfull.
-        lngrain_graph <- length(V(grain_graph))
+        num_vertices <- length(V(grain_graph))
         if (cl_args$verbose) {
-            pb <- txtProgressBar(min = 0, max = lngrain_graph, style = 3)
+            pb <- txtProgressBar(min = 0, max = num_vertices, style = 3)
             ctr <- 0
         }
         # Topological sort
