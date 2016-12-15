@@ -78,23 +78,23 @@ temp <- as.character(unlist(subset(edge_prop_cfg, type == "common" & property ==
 path_weight <- substr(temp, 2, nchar(temp) - 1)
 
 # Read data
-tg_data <- read.csv(cl_args$data, header=TRUE)
+graph_data <- read.csv(cl_args$data, header=TRUE)
 
 # Information output
-tg_info_out_file <- paste(gsub(". $", "", cl_args$out), ".info", sep="")
-sink(tg_info_out_file)
+graph_info_out_file <- paste(gsub(". $", "", cl_args$out), ".info", sep="")
+sink(graph_info_out_file)
 sink()
 
 # Remove background task
-tg_data <- tg_data[!is.na(tg_data$parent),]
+graph_data <- graph_data[!is.na(graph_data$parent),]
 
 # Path weight avaiability
-if (path_weight %in% colnames(tg_data))
+if (path_weight %in% colnames(graph_data))
     path_weight <- NA
 
 if (cl_args$forloop) {
     # Remove idle task without children
-    tg_data <- tg_data[!(tg_data$tag == "idle_task" & tg_data$num_children == 0),]
+    graph_data <- graph_data[!(graph_data$tag == "idle_task" & graph_data$num_children == 0),]
 }
 
 if (cl_args$verbose) my_print("Creating graph ...")
@@ -103,14 +103,14 @@ if (cl_args$verbose) my_print("Creating graph ...")
 if (cl_args$timing) tic(type="elapsed")
 
 # Create join nodes list
-join_nodes <- mapply(function(x, y, z) {paste('j', x, y, sep='.')}, x=tg_data$parent, y=tg_data$joins_at)
+join_nodes <- mapply(function(x, y, z) {paste('j', x, y, sep='.')}, x=graph_data$parent, y=graph_data$joins_at)
 join_nodes_unique <- unique(unlist(join_nodes, use.names=FALSE))
 
 # Create parent nodes list
-parent_nodes_unique <- unique(tg_data$parent)
+parent_nodes_unique <- unique(graph_data$parent)
 
 # Create fork nodes list
-fork_nodes <- mapply(function(x, y, z) {paste('f', x, y, sep='.')}, x=tg_data$parent, y=tg_data$joins_at)
+fork_nodes <- mapply(function(x, y, z) {paste('f', x, y, sep='.')}, x=graph_data$parent, y=graph_data$joins_at)
 fork_nodes_unique <- unique(unlist(fork_nodes, use.names=FALSE))
 
 if (cl_args$timing) toc("Node list creation")
@@ -118,11 +118,11 @@ if (cl_args$timing) toc("Node list creation")
 # Create graph
 if (cl_args$timing) tic(type="elapsed")
 
-tg <- graph.empty(directed=TRUE) + vertices('E',
+graph <- graph.empty(directed=TRUE) + vertices('E',
                                             unique(c(join_nodes_unique,
                                                      fork_nodes_unique,
                                                      parent_nodes_unique,
-                                                     tg_data$task)))
+                                                     graph_data$task)))
 
 if (cl_args$timing) toc("Graph creation")
 
@@ -130,8 +130,8 @@ if (cl_args$timing) toc("Graph creation")
 if (cl_args$verbose) my_print("Connecting nodes ...")
 if (cl_args$timing) tic(type="elapsed")
 
-tg[from=fork_nodes, to=tg_data$task, attr='type'] <- 'create'
-tg[from=fork_nodes, to=tg_data$task, attr='color'] <- create_edge_color
+graph[from=fork_nodes, to=graph_data$task, attr='type'] <- 'create'
+graph[from=fork_nodes, to=graph_data$task, attr='color'] <- create_edge_color
 
 if (cl_args$timing) toc("Connect parent fork to task")
 
@@ -142,14 +142,14 @@ first_forks_index <- which(grepl("f.[0-9]+.0$", fork_nodes_unique))
 parent_first_forks <- as.vector(sapply(fork_nodes_unique[first_forks_index], function(x) {gsub('f.(.*)\\.+.*','\\1', x)}))
 first_forks <- fork_nodes_unique[first_forks_index]
 
-tg[to=first_forks, from=parent_first_forks, attr='type'] <- 'scope'
-tg[to=first_forks, from=parent_first_forks, attr='color'] <- scope_edge_color
+graph[to=first_forks, from=parent_first_forks, attr='type'] <- 'scope'
+graph[to=first_forks, from=parent_first_forks, attr='color'] <- scope_edge_color
 
 if (!is.na(path_weight)) {
-    temp <- as.numeric(tg_data[match(parent_first_forks, tg_data$task),path_weight])
+    temp <- as.numeric(graph_data[match(parent_first_forks, graph_data$task),path_weight])
 
-    tg[to=first_forks, from=parent_first_forks, attr=path_weight] <- temp
-    tg[to=first_forks, from=parent_first_forks, attr='weight'] <- -temp
+    graph[to=first_forks, from=parent_first_forks, attr=path_weight] <- temp
+    graph[to=first_forks, from=parent_first_forks, attr='weight'] <- -temp
 }
 
 if (cl_args$timing) toc("Connect parent to first fork")
@@ -157,16 +157,16 @@ if (cl_args$timing) toc("Connect parent to first fork")
 # Connect leaf task to join
 if (cl_args$timing) tic(type="elapsed")
 
-leaf_tasks <- tg_data$task[tg_data$leaf == T]
-leaf_join_nodes <- join_nodes[match(leaf_tasks, tg_data$task)]
+leaf_tasks <- graph_data$task[graph_data$leaf == T]
+leaf_join_nodes <- join_nodes[match(leaf_tasks, graph_data$task)]
 
-tg[from=leaf_tasks, to=leaf_join_nodes, attr='type'] <- 'sync'
-tg[from=leaf_tasks, to=leaf_join_nodes, attr='color'] <- sync_edge_color
+graph[from=leaf_tasks, to=leaf_join_nodes, attr='type'] <- 'sync'
+graph[from=leaf_tasks, to=leaf_join_nodes, attr='color'] <- sync_edge_color
 
 if (!is.na(path_weight)) {
-    temp <- as.numeric(tg_data[match(leaf_tasks, tg_data$task),path_weight])
-    tg[from=leaf_tasks, to=leaf_join_nodes, attr=path_weight] <- temp
-    tg[from=leaf_tasks, to=leaf_join_nodes, attr='weight'] <- -temp
+    temp <- as.numeric(graph_data[match(leaf_tasks, graph_data$task),path_weight])
+    graph[from=leaf_tasks, to=leaf_join_nodes, attr=path_weight] <- temp
+    graph[from=leaf_tasks, to=leaf_join_nodes, attr='weight'] <- -temp
 }
 
 if (cl_args$timing) toc("Connect leaf task to join")
@@ -191,9 +191,9 @@ find_next_fork <- function(node)
     } else {
 
         # Next fork is part of grandfather
-        parent_index <- match(parent, tg_data$task)
-        gfather <- tg_data[parent_index,]$parent
-        gfather_join <- paste('j', as.character(gfather), as.character(tg_data[parent_index,]$joins_at), sep=".")
+        parent_index <- match(parent, graph_data$task)
+        gfather <- graph_data[parent_index,]$parent
+        gfather_join <- paste('j', as.character(gfather), as.character(graph_data[parent_index,]$joins_at), sep=".")
 
         if (is.na(match(gfather_join, join_nodes_unique)) == F) {
             next_fork <- gfather_join # Connect to grandfather's join
@@ -206,8 +206,8 @@ find_next_fork <- function(node)
 
 next_forks <- as.vector(sapply(join_nodes_unique, find_next_fork))
 
-tg[from=join_nodes_unique, to=next_forks, attr='type'] <- 'continue'
-tg[from=join_nodes_unique, to=next_forks, attr='color'] <- cont_edge_color
+graph[from=join_nodes_unique, to=next_forks, attr='type'] <- 'continue'
+graph[from=join_nodes_unique, to=next_forks, attr='color'] <- cont_edge_color
 
 #Rprof(NULL)
 if (cl_args$timing) toc("Connect join to next fork")
@@ -217,50 +217,50 @@ if (cl_args$verbose) my_print("Setting attributes ...")
 if (cl_args$timing) tic(type="elapsed")
 
 # Common vertex attributes
-V(tg)$label <- V(tg)$name
+V(graph)$label <- V(graph)$name
 
 # Set task vertex attributes
-task_index <- match(as.character(tg_data$task), V(tg)$name)
+task_index <- match(as.character(graph_data$task), V(graph)$name)
 
 # Set annotations
-for (annot in colnames(tg_data)) {
-    values <- as.character(tg_data[,annot])
-    tg <- set.vertex.attribute(tg, name=annot, index=task_index, value=values)
+for (annot in colnames(graph_data)) {
+    values <- as.character(graph_data[,annot])
+    graph <- set.vertex.attribute(graph, name=annot, index=task_index, value=values)
 }
 
 # Set size constants
-tg <- set.vertex.attribute(tg, name='size', index=task_index, value=task_size)
-tg <- set.vertex.attribute(tg, name='width', index=task_index, value=task_size)
-tg <- set.vertex.attribute(tg, name='height', index=task_index, value=task_size)
-tg <- set.vertex.attribute(tg, name='shape', index=task_index, value=task_shape)
+graph <- set.vertex.attribute(graph, name='size', index=task_index, value=task_size)
+graph <- set.vertex.attribute(graph, name='width', index=task_index, value=task_size)
+graph <- set.vertex.attribute(graph, name='height', index=task_index, value=task_size)
+graph <- set.vertex.attribute(graph, name='shape', index=task_index, value=task_shape)
 
 # Scale size to attributes
 size_scaled <- c("ins_count", "work_cycles", "overhead_cycles", "exec_cycles")
 for(attrib in size_scaled) {
-    if (attrib %in% colnames(tg_data)) {
+    if (attrib %in% colnames(graph_data)) {
 
         # Set size
-        attrib_unique <- unique(tg_data[,attrib])
+        attrib_unique <- unique(graph_data[,attrib])
         if (length(attrib_unique) == 1) {
             p_task_size <- task_size_mult
         } else if(length(attrib_unique) == 2 & identical(c(0,NA), as.numeric(attrib_unique[order(attrib_unique)]))) {
             p_task_size <- task_size_mult
         } else {
-            p_task_size <- task_size_mult * as.numeric(cut(tg_data[,attrib], task_size_bins))
+            p_task_size <- task_size_mult * as.numeric(cut(graph_data[,attrib], task_size_bins))
         }
         annot_name <- paste(attrib, "_to_size", sep="")
-        tg <- set.vertex.attribute(tg, name=annot_name, index=task_index, value=p_task_size)
+        graph <- set.vertex.attribute(graph, name=annot_name, index=task_index, value=p_task_size)
 
         # Set height
-        attrib_val <- tg_data[,attrib]
+        attrib_val <- graph_data[,attrib]
         attrib_val_norm <- 1 + ((attrib_val - min(attrib_val)) / (max(attrib_val) - min(attrib_val)))
         annot_name <- paste(attrib, "_to_height", sep="")
-        tg <- set.vertex.attribute(tg, name=annot_name, index=task_index, value=attrib_val_norm*task_size)
+        graph <- set.vertex.attribute(graph, name=annot_name, index=task_index, value=attrib_val_norm*task_size)
     }
 }
 
 # Set color constants
-tg <- set.vertex.attribute(tg, name='color', index=task_index, value=task_color)
+graph <- set.vertex.attribute(graph, name='color', index=task_index, value=task_color)
 
 # Scale color to attributes
 # "-" in attribute name implies higher is better
@@ -277,17 +277,17 @@ for(attrib in attrib_color_scaled) {
         attrib <- substring(attrib, 2, nchar(attrib))
     }
 
-    if (attrib %in% colnames(tg_data)) {
+    if (attrib %in% colnames(graph_data)) {
 
         # Set color in proportion to attrib
-        attrib_unique <- unique(tg_data[,attrib])
+        attrib_unique <- unique(graph_data[,attrib])
         if (invert_colors) {
             if (length(attrib_unique) == 1) {
                 p_task_color <- task_color_pal[task_color_bins]
             } else if(length(attrib_unique) == 2 & identical(c(0,NA), as.numeric(attrib_unique[order(attrib_unique)]))) {
                 p_task_color <- task_color_pal[task_color_bins]
             } else {
-                p_task_color <- rev(task_color_pal)[as.numeric(cut(tg_data[,attrib], task_color_bins))]
+                p_task_color <- rev(task_color_pal)[as.numeric(cut(graph_data[,attrib], task_color_bins))]
             }
         } else {
             if (length(attrib_unique) == 1) {
@@ -295,78 +295,78 @@ for(attrib in attrib_color_scaled) {
             } else if(length(attrib_unique) == 2 & identical(c(0,NA), as.numeric(attrib_unique[order(attrib_unique)]))) {
                 p_task_color <- task_color_pal[1]
             } else {
-                p_task_color <- task_color_pal[as.numeric(cut(tg_data[,attrib], task_color_bins))]
+                p_task_color <- task_color_pal[as.numeric(cut(graph_data[,attrib], task_color_bins))]
             }
         }
         annot_name <- paste(attrib, "_to_color", sep="")
-        tg <- set.vertex.attribute(tg, name=annot_name, index=task_index, value=p_task_color)
+        graph <- set.vertex.attribute(graph, name=annot_name, index=task_index, value=p_task_color)
 
         # Write colors for reference
-        tg_out_file <- paste(gsub(". $", "", cl_args$out), annot_name, sep=".")
+        graph_out_file <- paste(gsub(". $", "", cl_args$out), annot_name, sep=".")
         if (length(attrib_unique) == 1) {
-            write.csv(data.frame(value=attrib_unique, color=p_task_color), tg_out_file, row.names=F)
+            write.csv(data.frame(value=attrib_unique, color=p_task_color), graph_out_file, row.names=F)
         } else if(length(attrib_unique) == 2 & identical(c(0,NA), as.numeric(attrib_unique[order(attrib_unique)]))) {
-            write.csv(data.frame(value=attrib_unique, color=p_task_color), tg_out_file, row.names=F)
+            write.csv(data.frame(value=attrib_unique, color=p_task_color), graph_out_file, row.names=F)
         } else {
-            v <- unique(cut(tg_data[,attrib], task_color_bins))
-            write.csv(data.frame(value=v, color=task_color_pal[as.numeric(v)]), tg_out_file, row.names=F)
+            v <- unique(cut(graph_data[,attrib], task_color_bins))
+            write.csv(data.frame(value=v, color=task_color_pal[as.numeric(v)]), graph_out_file, row.names=F)
         }
-        my_print(paste("Wrote file:", tg_out_file))
+        my_print(paste("Wrote file:", graph_out_file))
     }
 }
 
 # Set attributes to distinct color
 attrib_color_distinct <- c("cpu_id", "outl_func", "tag", "outline_function")
 for(attrib in attrib_color_distinct) {
-    if (attrib %in% colnames(tg_data)) {
+    if (attrib %in% colnames(graph_data)) {
 
         # Map distinct color to attrib
-        attrib_val <- as.character(tg_data[,attrib])
+        attrib_val <- as.character(graph_data[,attrib])
         unique_attrib_val <- unique(attrib_val)
         #attrib_color <- rainbow(length(unique_attrib_val), start=0.4, end=0.8)
         attrib_color <- rev(topo.colors(length(unique_attrib_val)))
         annot_name <- paste(attrib, "_to_color", sep="")
-        tg <- set.vertex.attribute(tg, name=annot_name, index=task_index, value=attrib_color[match(attrib_val, unique_attrib_val)])
+        graph <- set.vertex.attribute(graph, name=annot_name, index=task_index, value=attrib_color[match(attrib_val, unique_attrib_val)])
 
         # Write colors for reference
-        tg_out_file <- paste(gsub(". $", "", cl_args$out), annot_name, sep=".")
-        write.csv(data.frame(value=unique_attrib_val, color=attrib_color), tg_out_file, row.names=F)
-        my_print(paste("Wrote file:", tg_out_file))
+        graph_out_file <- paste(gsub(". $", "", cl_args$out), annot_name, sep=".")
+        write.csv(data.frame(value=unique_attrib_val, color=attrib_color), graph_out_file, row.names=F)
+        my_print(paste("Wrote file:", graph_out_file))
     }
 }
 
 # Set label and color of 'task 0'
-start_index <- V(tg)$name == '0'
-tg <- set.vertex.attribute(tg, name='color', index=start_index, value=start_color)
-tg <- set.vertex.attribute(tg, name='label', index=start_index, value='S')
-tg <- set.vertex.attribute(tg, name='size', index=start_index, value=start_size)
-tg <- set.vertex.attribute(tg, name='shape', index=start_index, value=start_shape)
+start_index <- V(graph)$name == '0'
+graph <- set.vertex.attribute(graph, name='color', index=start_index, value=start_color)
+graph <- set.vertex.attribute(graph, name='label', index=start_index, value='S')
+graph <- set.vertex.attribute(graph, name='size', index=start_index, value=start_size)
+graph <- set.vertex.attribute(graph, name='shape', index=start_index, value=start_shape)
 
 # Set label and color of 'task E'
-end_index <- V(tg)$name == "E"
-tg <- set.vertex.attribute(tg, name='color', index=end_index, value=end_color)
-tg <- set.vertex.attribute(tg, name='label', index=end_index, value='E')
-tg <- set.vertex.attribute(tg, name='size', index=end_index, value=end_size)
-tg <- set.vertex.attribute(tg, name='shape', index=end_index, value=end_shape)
+end_index <- V(graph)$name == "E"
+graph <- set.vertex.attribute(graph, name='color', index=end_index, value=end_color)
+graph <- set.vertex.attribute(graph, name='label', index=end_index, value='E')
+graph <- set.vertex.attribute(graph, name='size', index=end_index, value=end_size)
+graph <- set.vertex.attribute(graph, name='shape', index=end_index, value=end_shape)
 
 # Set fork vertex attributes
-fork_nodes_index <- startsWith(V(tg)$name, 'f')
-tg <- set.vertex.attribute(tg, name='size', index=fork_nodes_index, value=fork_size)
-tg <- set.vertex.attribute(tg, name='color', index=fork_nodes_index, value=fork_color)
-tg <- set.vertex.attribute(tg, name='label', index=fork_nodes_index, value='^')
-tg <- set.vertex.attribute(tg, name='shape', index=fork_nodes_index, value=fork_shape)
+fork_nodes_index <- startsWith(V(graph)$name, 'f')
+graph <- set.vertex.attribute(graph, name='size', index=fork_nodes_index, value=fork_size)
+graph <- set.vertex.attribute(graph, name='color', index=fork_nodes_index, value=fork_color)
+graph <- set.vertex.attribute(graph, name='label', index=fork_nodes_index, value='^')
+graph <- set.vertex.attribute(graph, name='shape', index=fork_nodes_index, value=fork_shape)
 
 # Set join vertex attributes
-join_nodes_index <- startsWith(V(tg)$name, 'j')
-tg <- set.vertex.attribute(tg, name='size', index=join_nodes_index, value=join_size)
-tg <- set.vertex.attribute(tg, name='color', index=join_nodes_index, value=join_color)
-tg <- set.vertex.attribute(tg, name='label', index=join_nodes_index, value='*')
-tg <- set.vertex.attribute(tg, name='shape', index=join_nodes_index, value=join_shape)
+join_nodes_index <- startsWith(V(graph)$name, 'j')
+graph <- set.vertex.attribute(graph, name='size', index=join_nodes_index, value=join_size)
+graph <- set.vertex.attribute(graph, name='color', index=join_nodes_index, value=join_color)
+graph <- set.vertex.attribute(graph, name='label', index=join_nodes_index, value='*')
+graph <- set.vertex.attribute(graph, name='shape', index=join_nodes_index, value=join_shape)
 
 # Set edge attributes
 if (!is.na(path_weight)) {
-    tg <- set.edge.attribute(tg, name="weight", index=which(is.na(E(tg)$weight)), value=0)
-    tg <- set.edge.attribute(tg, name=path_weight, index=which(is.na(get.edge.attribute(tg, name=path_weight, index=E(tg)))), value=0)
+    graph <- set.edge.attribute(graph, name="weight", index=which(is.na(E(graph)$weight)), value=0)
+    graph <- set.edge.attribute(graph, name=path_weight, index=which(is.na(get.edge.attribute(graph, name=path_weight, index=E(graph)))), value=0)
 }
 
 if (cl_args$timing) toc("Attribute setting")
@@ -375,22 +375,22 @@ if (cl_args$timing) toc("Attribute setting")
 if (cl_args$verbose) my_print("Checking for bad structure ...")
 if (cl_args$timing) tic(type="elapsed")
 
-if (is.element(0, degree(tg, fork_nodes_index, mode = c("in")))) {
+if (is.element(0, degree(graph, fork_nodes_index, mode = c("in")))) {
     my_print("Warning! One or more fork nodes have zero degree since one or more tasks in the program performed empty synchronization.")
     my_print("Aborting on error!")
     quit("no", 1)
 }
-if (is.element(0, degree(tg, fork_nodes_index, mode = c("out")))) {
+if (is.element(0, degree(graph, fork_nodes_index, mode = c("out")))) {
     my_print("Warning! One or more fork nodes have zero degree since one or more tasks in the program performed empty synchronization.")
     my_print("Aborting on error!")
     quit("no", 1)
 }
-if (is.element(0, degree(tg, join_nodes_index, mode = c("in")))) {
+if (is.element(0, degree(graph, join_nodes_index, mode = c("in")))) {
     my_print("Warning! One or more join nodes have zero degree since one or more tasks in the program performed empty synchronization.")
     my_print("Aborting on error!")
     quit("no", 1)
 }
-if (is.element(0, degree(tg, join_nodes_index, mode = c("out")))) {
+if (is.element(0, degree(graph, join_nodes_index, mode = c("out")))) {
     my_print("Warning! One or more join nodes have zero degree since one or more tasks in the program performed empty synchronization.")
     my_print("Aborting on error!")
     quit("no", 1)
@@ -403,37 +403,37 @@ if (!is.na(path_weight)) {
     if (cl_args$verbose) my_print("Calculating critical path ...")
     if (cl_args$timing) tic(type="elapsed")
     # Simplify - DO NOT USE. Fucks up the critical path analysis.
-    #tg <- simplify(tg, edge.attr.comb=toString)
+    #graph <- simplify(graph, edge.attr.comb=toString)
 
     # Get critical path
     #Rprof("profile-critpathcalc.out")
     if (!cl_args$enumcriticalpath) {
         # Compute critical path length
-        sp <- shortest.paths(tg, v=start_index, to=end_index, mode="out")
+        sp <- shortest.paths(graph, v=start_index, to=end_index, mode="out")
         lpl <- -as.numeric(sp)
     } else {
         # TODO: Make variable names in this block meaningfull.
-        lntg <- length(V(tg))
+        lngraph <- length(V(graph))
         if (cl_args$verbose) {
-            pb <- txtProgressBar(min = 0, max = lntg, style = 3)
+            pb <- txtProgressBar(min = 0, max = lngraph, style = 3)
             ctr <- 0
         }
         # Topological sort
-        tsg <- topological.sort(tg)
+        tsg <- topological.sort(graph)
         # Set root path attributes
-        V(tg)[tsg[1]]$rdist <- 0
-        V(tg)[tsg[1]]$depth <- 0
-        V(tg)[tsg[1]]$rpath <- tsg[1]
+        V(graph)[tsg[1]]$rdist <- 0
+        V(graph)[tsg[1]]$depth <- 0
+        V(graph)[tsg[1]]$rpath <- tsg[1]
         # Get data frame of graph object
-        vgdf <- get.data.frame(tg, what="vertices")
+        vgdf <- get.data.frame(graph, what="vertices")
         # Get longest paths from root
         for(node in tsg[-1])
         {
             # Get distance from node's predecessors
-            ni <- incident(tg, node, mode="in")
-            w <- -E(tg)[ni]$weight
+            ni <- incident(graph, node, mode="in")
+            w <- -E(graph)[ni]$weight
             # Get distance from root to node's predecessors
-            nn <- neighbors(tg, node, mode="in")
+            nn <- neighbors(graph, node, mode="in")
             d <- vgdf$rdist[nn]
             # Add distances (assuming one-one corr.)
             wd <- w+d
@@ -458,11 +458,11 @@ if (!is.na(path_weight)) {
         vgdf$on_crit_path <- 0
         vgdf$on_crit_path[lpm] <- 1
         # Set back on graph
-        tg <- set.vertex.attribute(tg, name="on_crit_path", index=V(tg), value=vgdf$on_crit_path)
-        tg <- set.vertex.attribute(tg, name="rdist", index=V(tg), value=vgdf$rdist)
-        tg <- set.vertex.attribute(tg, name="depth", index=V(tg), value=vgdf$depth)
-        critical_edges <- E(tg)[V(tg)[on_crit_path==1] %--% V(tg)[on_crit_path==1]]
-        tg <- set.edge.attribute(tg, name="on_crit_path", index=critical_edges, value=1)
+        graph <- set.vertex.attribute(graph, name="on_crit_path", index=V(graph), value=vgdf$on_crit_path)
+        graph <- set.vertex.attribute(graph, name="rdist", index=V(graph), value=vgdf$rdist)
+        graph <- set.vertex.attribute(graph, name="depth", index=V(graph), value=vgdf$depth)
+        critical_edges <- E(graph)[V(graph)[on_crit_path==1] %--% V(graph)[on_crit_path==1]]
+        graph <- set.edge.attribute(graph, name="on_crit_path", index=critical_edges, value=1)
         if (cl_args$verbose) {
             ctr <- ctr + 1
             setTxtProgressBar(pb, ctr)
@@ -472,10 +472,10 @@ if (!is.na(path_weight)) {
     #Rprof(NULL)
 
     # Calculate and write info
-    sink(tg_info_out_file, append=T)
+    sink(graph_info_out_file, append=T)
     my_print(paste("# Cilk theory parallelism (unit =", path_weight, "):", sep=""))
     my_print(paste("Span (critical path) =", lpl))
-    work <- sum(as.numeric(tg_data[,path_weight]))
+    work <- sum(as.numeric(graph_data[,path_weight]))
     my_print(paste("Work =", work))
     my_print(paste("Parallelism (Work/Span) =", work/lpl))
     my_print()
@@ -484,41 +484,41 @@ if (!is.na(path_weight)) {
     # Shape calculation
     if (cl_args$enumcriticalpath) {
         # Clear rpath since dot/table writing complains
-        tg <- remove.vertex.attribute(tg,"rpath")
+        graph <- remove.vertex.attribute(graph,"rpath")
 
         # Calc shape
-        tg_df <- get.data.frame(tg, what="vertices")
-        tg_df <- tg_df[!is.na(as.numeric(tg_df$label)),]
-        #tg_shape_interval_width <- work/(length(unique(tg_data$cpu_id))*mean(tg_data[,path_weight]))
-        tg_shape_interval_width <- median(as.numeric(tg_df[,path_weight], na.rm=T))
-        stopifnot(tg_shape_interval_width > 0)
-        tg_shape_breaks <- seq(0, max(tg_df$rdist) + 1 + tg_shape_interval_width, by=tg_shape_interval_width)
-        tg_shape <- hist(tg_df$rdist, breaks=tg_shape_breaks, plot=F)
+        graph_df <- get.data.frame(graph, what="vertices")
+        graph_df <- graph_df[!is.na(as.numeric(graph_df$label)),]
+        #graph_shape_interval_width <- work/(length(unique(graph_data$cpu_id))*mean(graph_data[,path_weight]))
+        graph_shape_interval_width <- median(as.numeric(graph_df[,path_weight], na.rm=T))
+        stopifnot(graph_shape_interval_width > 0)
+        graph_shape_breaks <- seq(0, max(graph_df$rdist) + 1 + graph_shape_interval_width, by=graph_shape_interval_width)
+        graph_shape <- hist(graph_df$rdist, breaks=graph_shape_breaks, plot=F)
 
         # Write out shape
-        tg_out_file <- paste(gsub(". $", "", cl_args$out), "-shape.pdf", sep="")
-        pdf(tg_out_file)
-        plot(tg_shape, freq=T, xlab=paste("Elapsed ", path_weight), ylab="Tasks", main="Instantaneous task parallelism", col="white")
-        abline(h = length(unique(tg_data$cpu_id)), col = "blue", lty=2)
+        graph_out_file <- paste(gsub(". $", "", cl_args$out), "-shape.pdf", sep="")
+        pdf(graph_out_file)
+        plot(graph_shape, freq=T, xlab=paste("Elapsed ", path_weight), ylab="Tasks", main="Instantaneous task parallelism", col="white")
+        abline(h = length(unique(graph_data$cpu_id)), col = "blue", lty=2)
         abline(h = work/lpl , col = "red", lty=1)
         legend("top", legend = c("Number of cores", "Exposed task parallelism"), fill = c("blue", "red"))
         dev.off()
-        my_print(paste("Wrote file:", tg_out_file))
+        my_print(paste("Wrote file:", graph_out_file))
     }
     if (cl_args$timing) toc("Critical path calculation")
 }
 
 # Write basic graph info
-sink(tg_info_out_file, append=T)
+sink(graph_info_out_file, append=T)
 my_print("# Task graph structure:")
-my_print(paste("Number of nodes =", length(V(tg))))
-my_print(paste("Number of edges =", length(E(tg))))
-my_print(paste("Number of tasks =", length(tg_data$task)))
+my_print(paste("Number of nodes =", length(V(graph))))
+my_print(paste("Number of edges =", length(E(graph))))
+my_print(paste("Number of tasks =", length(graph_data$task)))
 if (cl_args$enumcriticalpath)
-    my_print(paste("Number of critical tasks =", length(tg_df$task[tg_df$on_crit_path == 1])))
+    my_print(paste("Number of critical tasks =", length(graph_df$task[graph_df$on_crit_path == 1])))
 my_print(paste("Number of forks =", length(fork_nodes_unique)))
 my_print("Out-degree distribution of forks:")
-degree.distribution(tg, v=fork_nodes_index, mode="out")
+degree.distribution(graph, v=fork_nodes_index, mode="out")
 my_print()
 sink()
 
@@ -528,69 +528,69 @@ if (cl_args$verbose) my_print("Writing graph files ...")
 ## Layout in Sugiyama style and write to PDF
 if (cl_args$layout) {
     if (cl_args$timing) tic(type="elapsed")
-    tg_out_file <- paste(gsub(". $", "", cl_args$out), ".pdf", sep="")
-    lyt <- layout_with_sugiyama(tg, attributes="all")
-    pdf(tg_out_file)
-    res <- plot(tg, layout=lyt$layout)
+    graph_out_file <- paste(gsub(". $", "", cl_args$out), ".pdf", sep="")
+    lyt <- layout_with_sugiyama(graph, attributes="all")
+    pdf(graph_out_file)
+    res <- plot(graph, layout=lyt$layout)
     res <- dev.off()
-    my_print(paste("Wrote file:", tg_out_file))
+    my_print(paste("Wrote file:", graph_out_file))
     if (cl_args$timing) toc("Write Sugiyama layout PDF")
 }
 
 ## Write dot file
 #if (cl_args$timing) tic(type="elapsed")
-#tg_out_file <- paste(gsub(". $", "", cl_args$out), ".dot", sep="")
-#res <- write.graph(tg, file=tg_out_file, format="dot")
-#my_print(paste("Wrote file:", tg_out_file))
+#graph_out_file <- paste(gsub(". $", "", cl_args$out), ".dot", sep="")
+#res <- write.graph(graph, file=graph_out_file, format="dot")
+#my_print(paste("Wrote file:", graph_out_file))
 #if (cl_args$timing) toc("Write dot")
 
 # Write gml file
 if (cl_args$timing) tic(type="elapsed")
-tg_out_file <- paste(gsub(". $", "", cl_args$out), ".graphml", sep="")
-res <- write.graph(tg, file=tg_out_file, format="graphml")
-my_print(paste("Wrote file:", tg_out_file))
+graph_out_file <- paste(gsub(". $", "", cl_args$out), ".graphml", sep="")
+res <- write.graph(graph, file=graph_out_file, format="graphml")
+my_print(paste("Wrote file:", graph_out_file))
 if (cl_args$timing) toc("Write graphml")
 
 # Write graphml file with no attributes
 if (cl_args$timing) tic(type="elapsed")
-tg_out_file <- paste(gsub(". $", "", cl_args$out), "-noattrib.graphml", sep="")
-tg_noattrib <- tg
-for (attrib in vertex_attr_names(tg)) {
-    tg_noattrib <- delete_vertex_attr(tg_noattrib, attrib)
+graph_out_file <- paste(gsub(". $", "", cl_args$out), "-noattrib.graphml", sep="")
+graph_noattrib <- graph
+for (attrib in vertex_attr_names(graph)) {
+    graph_noattrib <- delete_vertex_attr(graph_noattrib, attrib)
 }
-for (attrib in edge_attr_names(tg)) {
-    tg_noattrib <- delete_edge_attr(tg_noattrib, attrib)
+for (attrib in edge_attr_names(graph)) {
+    graph_noattrib <- delete_edge_attr(graph_noattrib, attrib)
 }
-res <- write.graph(tg_noattrib, file=tg_out_file, format="graphml")
-my_print(paste("Wrote file:", tg_out_file))
+res <- write.graph(graph_noattrib, file=graph_out_file, format="graphml")
+my_print(paste("Wrote file:", graph_out_file))
 if (cl_args$timing) toc("Write graphml without attributes")
 
 ## Write adjacency matrix file
 #if (cl_args$timing) tic(type="elapsed")
-#tg_out_file <- paste(gsub(". $", "", cl_args$out), ".adjmat", sep="")
-#sink(tg_out_file)
-#get.adjacency(tg,names=T)
+#graph_out_file <- paste(gsub(". $", "", cl_args$out), ".adjmat", sep="")
+#sink(graph_out_file)
+#get.adjacency(graph,names=T)
 #sink()
-#my_print(paste("Wrote file:", tg_out_file))
+#my_print(paste("Wrote file:", graph_out_file))
 #if (cl_args$timing) toc("Write adjacency matrix")
 
 ## Write edgelist file
 #if (cl_args$timing) tic(type="elapsed")
-#tg_out_file <- paste(gsub(". $", "", cl_args$out), ".edgelist", sep="")
-#sink(tg_out_file)
-#get.edgelist(tg, names=T)
+#graph_out_file <- paste(gsub(". $", "", cl_args$out), ".edgelist", sep="")
+#sink(graph_out_file)
+#get.edgelist(graph, names=T)
 #sink()
-#my_print(paste("Wrote file:", tg_out_file))
+#my_print(paste("Wrote file:", graph_out_file))
 #if (cl_args$timing) toc("Write edgelist")
 
 # Write node attributes
 if (cl_args$timing) tic(type="elapsed")
-tg_out_file <- paste(gsub(". $", "", cl_args$out), ".nodeattr", sep="")
-write.table(get.data.frame(tg, what="vertices"), sep=",", file=tg_out_file)
-my_print(paste("Wrote file:", tg_out_file))
+graph_out_file <- paste(gsub(". $", "", cl_args$out), ".nodeattr", sep="")
+write.table(get.data.frame(graph, what="vertices"), sep=",", file=graph_out_file)
+my_print(paste("Wrote file:", graph_out_file))
 if (cl_args$timing) toc("Write node attributes")
 
-my_print(paste("Wrote file:", tg_info_out_file))
+my_print(paste("Wrote file:", graph_info_out_file))
 
 # Warn
 wa <- warnings()
