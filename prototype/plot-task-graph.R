@@ -373,28 +373,22 @@ if (!is.na(path_weight)) {
 
 if (cl_args$timing) toc("Attribute setting")
 
-# Check if grain_graph has bad structure
+# Check if grain graph has bad structure
 if (cl_args$verbose) my_print("Checking for bad structure ...")
 if (cl_args$timing) tic(type="elapsed")
 
-if (is.element(0, degree(grain_graph, fork_nodes_index, mode = c("in")))) {
-    my_print("Warning! One or more fork nodes have zero degree since one or more tasks in the program performed empty synchronization.")
-    my_print("Aborting on error!")
-    quit("no", 1)
-}
-if (is.element(0, degree(grain_graph, fork_nodes_index, mode = c("out")))) {
-    my_print("Warning! One or more fork nodes have zero degree since one or more tasks in the program performed empty synchronization.")
-    my_print("Aborting on error!")
-    quit("no", 1)
-}
-if (is.element(0, degree(grain_graph, join_nodes_index, mode = c("in")))) {
+bad_structure <- 0
+
+if ((is.element(0, degree(grain_graph, fork_nodes_index, mode = c("in")))) ||
+    (is.element(0, degree(grain_graph, fork_nodes_index, mode = c("out")))) ||
+    (is.element(0, degree(grain_graph, join_nodes_index, mode = c("in")))) ||
+    (is.element(0, degree(grain_graph, join_nodes_index, mode = c("out"))))) {
     my_print("Warning! One or more join nodes have zero degree since one or more tasks in the program performed empty synchronization.")
-    my_print("Aborting on error!")
-    quit("no", 1)
+    bad_structure <- 1
 }
-if (is.element(0, degree(grain_graph, join_nodes_index, mode = c("out")))) {
-    my_print("Warning! One or more join nodes have zero degree since one or more tasks in the program performed empty synchronization.")
-    my_print("Aborting on error!")
+
+if (bad_structure == 1) {
+    my_print("Graph has bad structure. Aborting on error!")
     quit("no", 1)
 }
 
