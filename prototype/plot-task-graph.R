@@ -419,15 +419,15 @@ if (!is.na(path_weight)) {
             ctr <- 0
         }
         # Topological sort
-        tsg <- topological.sort(grain_graph)
+        top_sort_graph <- topological.sort(grain_graph)
         # Set root path attributes
-        V(grain_graph)[tsg[1]]$rdist <- 0
-        V(grain_graph)[tsg[1]]$depth <- 0
-        V(grain_graph)[tsg[1]]$rpath <- tsg[1]
+        V(grain_graph)[top_sort_graph[1]]$rdist <- 0
+        V(grain_graph)[top_sort_graph[1]]$depth <- 0
+        V(grain_graph)[top_sort_graph[1]]$rpath <- top_sort_graph[1]
         # Get data frame of grain_graph object
         vgdf <- get.data.frame(grain_graph, what="vertices")
         # Get longest paths from root
-        for(node in tsg[-1])
+        for(node in top_sort_graph[-1])
         {
             # Get distance from node's predecessors
             ni <- incident(grain_graph, node, mode="in")
