@@ -442,7 +442,7 @@ if (!is.na(path_weight)) {
             max_root_dist <- max(root_dist)
             graph_vertices$root_dist[node] <- max_root_dist
             # Set node's path from root to path of max of added distances
-            nodes_on_root_path <- as.vector(adjacent_nodes)[match(max_root_distances,root_dist)]
+            nodes_on_root_path <- as.vector(adjacent_nodes)[match(max_root_dist,root_dist)]
             root_path <- list(c(unlist(graph_vertices$root_path[nodes_on_root_path]),node))
             graph_vertices$root_path[node] <- root_path
             # Set node's depth as one greater than the largest depth its predecessors
