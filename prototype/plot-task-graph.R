@@ -471,30 +471,6 @@ if (!is.na(path_weight)) {
     }
     #Rprof(NULL)
 
-    # Shape calculation
-    if (cl_args$enumcriticalpath) {
-        # Clear root_path since dot/table writing complains
-        grain_graph <- remove.vertex.attribute(grain_graph,"root_path")
-
-        # Calc shape
-        grain_graph_df <- get.data.frame(grain_graph, what="vertices")
-        grain_graph_df <- grain_graph_df[!is.na(as.numeric(grain_graph_df$label)),]
-        #grain_graph_shape_interval_width <- work/(length(unique(prof_data$cpu_id))*mean(prof_data[,path_weight]))
-        grain_graph_shape_interval_width <- median(as.numeric(grain_graph_df[,path_weight], na.rm=T))
-        stopifnot(grain_graph_shape_interval_width > 0)
-        grain_graph_shape_breaks <- seq(0, max(grain_graph_df$root_dist) + 1 + grain_graph_shape_interval_width, by=grain_graph_shape_interval_width)
-        grain_graph_shape <- hist(grain_graph_df$root_dist, breaks=grain_graph_shape_breaks, plot=F)
-
-        # Write out shape
-        temp_out_file <- paste(gsub(". $", "", cl_args$out), "-shape.pdf", sep="")
-        pdf(temp_out_file)
-        plot(grain_graph_shape, freq=T, xlab=paste("Elapsed ", path_weight), ylab="Tasks", main="Instantaneous task parallelism", col="white")
-        abline(h = length(unique(prof_data$cpu_id)), col = "blue", lty=2)
-        abline(h = work/critical_path , col = "red", lty=1)
-        legend("top", legend = c("Number of cores", "Exposed task parallelism"), fill = c("blue", "red"))
-        dev.off()
-        my_print(paste("Wrote file:", temp_out_file))
-    }
     if (cl_args$timing) toc("Critical path calculation")
 }
 
