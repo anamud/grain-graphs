@@ -488,7 +488,7 @@ work <- sum(as.numeric(prof_data[,path_weight]))
 my_print(paste("Work =", work))
 my_print(paste("Parallelism (Work/Span) =", work/critical_path))
 if (cl_args$enumcriticalpath)
-    my_print(paste("Number of critical tasks =", length(grain_graph_df$task[grain_graph_df$on_crit_path == 1])))
+    my_print(paste("Number of critical tasks =", length(graph_vertices$task[graph_vertices$on_crit_path == 1])))
 my_print()
 sink()
 
