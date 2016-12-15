@@ -9,24 +9,25 @@ source(paste(mir_root,"/prototype/common.R",sep=""))
 Rstudio_mode <- F
 if (Rstudio_mode) {
     cl_args <- list(data="task-stats.processed",
-                   out="grain-graph",
-                   enumcriticalpath=F,
                    grainpropertyconfig="grain-properties.cfg",
                    edgepropertyconfig="edge-properties.cfg",
+                   out="grain-graph",
+                   enumcriticalpath=F,
+                   forloop=F,
+                   layout=F,
                    verbose=T,
-                   timing=F,
-                   layout=F)
+                   timing=F)
 } else {
     option_list <- list(make_option(c("-d","--data"), help = "Task stats.", metavar="FILE"),
+                        make_option(c("--grainpropertyconfig"), default="grain-properties.cfg", help = "Grain property configuration file [default \"%default\"].", metavar="FILE"),
+                        make_option(c("--edgepropertyconfig"), default="edge-properties.cfg", help = "Edge property configuration file [default \"%default\"].", metavar="FILE"),
                         make_option(c("-o","--out"), default="grain-graph", help = "Output file suffix [default \"%default\"].", metavar="STRING"),
                         make_option(c("--enumcriticalpath"), action="store_true", default=FALSE, help="Enumerate critical path."),
                         make_option(c("--forloop"), action="store_true", default=FALSE, help="Task stats obtained from a for-loop program."),
-                        make_option(c("--grainpropertyconfig"), default="grain-properties.cfg", help = "Grain property configuration file [default \"%default\"].", metavar="FILE"),
-                        make_option(c("--edgepropertyconfig"), default="edge-properties.cfg", help = "Edge property configuration file [default \"%default\"].", metavar="FILE"),
+                        make_option(c("--layout"), action="store_true", default=FALSE, help="Layout using Sugiyama style and plot to PDF."),
                         make_option(c("--verbose"), action="store_true", default=TRUE, help="Print output [default]."),
                         make_option(c("--quiet"), action="store_false", dest="verbose", help="Print little output."),
-                        make_option(c("--timing"), action="store_true", default=FALSE, help="Print processing time."),
-                        make_option(c("--layout"), action="store_true", default=FALSE, help="Layout using Sugiyama style and plot to PDF."))
+                        make_option(c("--timing"), action="store_true", default=FALSE, help="Print processing time."))
 
     cl_args <- parse_args(OptionParser(option_list = option_list), args = commandArgs(TRUE))
 
