@@ -408,7 +408,7 @@ if (!is.na(path_weight)) {
     # Get critical path
     #Rprof("profile-critpathcalc.out")
     if (!cl_args$enumcriticalpath) {
-        # Compute critical path length
+        # Compute critical path length using Bellman Ford algorithm with negative weights
         shortest_path <- shortest.paths(grain_graph, v=start_index, to=end_index, mode="out")
         critical_path <- -as.numeric(shortest_path)
     } else {
