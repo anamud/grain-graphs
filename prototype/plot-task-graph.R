@@ -477,14 +477,14 @@ if (!is.na(path_weight)) {
 
 # Write basic grain graph info
 sink(grain_graph_info_out_file, append=T)
-my_print("# Grain graph structure:")
+my_print("# Grain graph structure")
 my_print(paste("Number of nodes =", length(V(grain_graph))))
 my_print(paste("Number of edges =", length(E(grain_graph))))
 my_print(paste("Number of tasks =", length(prof_data$task)))
 my_print(paste("Number of forks =", length(fork_nodes_unique)))
-my_print("Out-degree distribution of forks:")
+my_print("# Out-degree distribution of forks")
 degree.distribution(grain_graph, v=fork_nodes_index, mode="out")
-my_print(paste("# Cilk theory parallelism (metric =", path_weight, "):", sep=""))
+my_print(paste("# Cilk theory parallelism (metric = ", path_weight, ")", sep=""))
 my_print(paste("Span (critical path) =", critical_path))
 work <- sum(as.numeric(prof_data[,path_weight]))
 my_print(paste("Work =", work))
