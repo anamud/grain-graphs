@@ -431,12 +431,12 @@ if (!is.na(path_weight)) {
         {
             # Get distance from node's predecessors
             incident_edges <- incident(grain_graph, node, mode="in")
-            w <- -E(grain_graph)[incident_edges]$weight
+            incident_edge_weights <- -E(grain_graph)[incident_edges]$weight
             # Get distance from root to node's predecessors
             nn <- neighbors(grain_graph, node, mode="in")
             d <- graph_vertices$root_dist[nn]
             # Add distances (assuming one-one corr.)
-            wd <- w+d
+            wd <- incident_edge_weights + d
             # Set node's distance from root to max of added distances
             mwd <- max(wd)
             graph_vertices$root_dist[node] <- mwd
