@@ -409,8 +409,8 @@ if (!is.na(path_weight)) {
     #Rprof("profile-critpathcalc.out")
     if (!cl_args$enumcriticalpath) {
         # Compute critical path length
-        sp <- shortest.paths(grain_graph, v=start_index, to=end_index, mode="out")
-        lpl <- -as.numeric(sp)
+        shortest_path <- shortest.paths(grain_graph, v=start_index, to=end_index, mode="out")
+        lpl <- -as.numeric(shortest_path)
     } else {
         # TODO: Make variable names in this block meaningfull.
         lngrain_graph <- length(V(grain_graph))
