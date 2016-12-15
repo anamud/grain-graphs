@@ -22,7 +22,7 @@ if (Rstudio_mode) {
                         make_option(c("--grainpropertyconfig"), default="grain-properties.cfg", help = "Grain property configuration file [default \"%default\"].", metavar="FILE"),
                         make_option(c("--edgepropertyconfig"), default="edge-properties.cfg", help = "Edge property configuration file [default \"%default\"].", metavar="FILE"),
                         make_option(c("-o","--out"), default="grain-graph", help = "Output file suffix [default \"%default\"].", metavar="STRING"),
-                        make_option(c("--enumcriticalpath"), action="store_true", default=FALSE, help="Enumerate critical path."),
+                        make_option(c("--enumcriticalpath"), action="store_true", default=FALSE, help="Enumerate nodes critical path."),
                         make_option(c("--forloop"), action="store_true", default=FALSE, help="Task profiling data obtained from a for-loop program."),
                         make_option(c("--layout"), action="store_true", default=FALSE, help="Layout using Sugiyama style and plot to PDF."),
                         make_option(c("--verbose"), action="store_true", default=TRUE, help="Print output [default]."),
@@ -405,14 +405,13 @@ if (!is.na(path_weight)) {
     # Simplify - DO NOT USE. Fucks up the critical path analysis.
     #grain_graph <- simplify(grain_graph, edge.attr.comb=toString)
 
-    # Get critical path
+    # Compute critical path
     #Rprof("profile-critpathcalc.out")
     if (!cl_args$enumcriticalpath) {
         # Compute critical path length using Bellman Ford algorithm with negative weights
         shortest_path <- shortest.paths(grain_graph, v=start_index, to=end_index, mode="out")
         critical_path <- -as.numeric(shortest_path)
     } else {
-        # TODO: Make variable names in this block meaningfull.
         num_vertices <- length(V(grain_graph))
         if (cl_args$verbose) {
             progress_bar <- txtProgressBar(min = 0, max = num_vertices, style = 3)
@@ -451,13 +450,13 @@ if (!is.na(path_weight)) {
                 setTxtProgressBar(progress_bar, ctr)
             }
         }
-        ## Longest path is the largest root distance
+        ## Critical path is the one with the largest root distance
         critical_path <- max(graph_vertices$root_dist)
-        # Enumerate longest path
+        # Enumerate nodes on critical path
         critical_nodes <- unlist(graph_vertices$root_path[match(critical_path,graph_vertices$root_dist)])
         graph_vertices$on_crit_path <- 0
         graph_vertices$on_crit_path[critical_nodes] <- 1
-        # Set back on grain_graph
+        # Mark critical nodes and edges on grain graph
         grain_graph <- set.vertex.attribute(grain_graph, name="on_crit_path", index=V(grain_graph), value=graph_vertices$on_crit_path)
         grain_graph <- set.vertex.attribute(grain_graph, name="root_dist", index=V(grain_graph), value=graph_vertices$root_dist)
         grain_graph <- set.vertex.attribute(grain_graph, name="depth", index=V(grain_graph), value=graph_vertices$depth)
