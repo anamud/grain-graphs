@@ -421,9 +421,9 @@ if (!is.na(path_weight)) {
         # Topological sort
         top_sort_graph <- topological.sort(grain_graph)
         # Set root path attributes
-        V(grain_graph)[top_sort_graph[1]]$rdist <- 0
+        V(grain_graph)[top_sort_graph[1]]$root_dist <- 0
         V(grain_graph)[top_sort_graph[1]]$depth <- 0
-        V(grain_graph)[top_sort_graph[1]]$rpath <- top_sort_graph[1]
+        V(grain_graph)[top_sort_graph[1]]$root_path <- top_sort_graph[1]
         # Get data frame of grain_graph object
         vgdf <- get.data.frame(grain_graph, what="vertices")
         # Get longest paths from root
@@ -434,16 +434,16 @@ if (!is.na(path_weight)) {
             w <- -E(grain_graph)[ni]$weight
             # Get distance from root to node's predecessors
             nn <- neighbors(grain_graph, node, mode="in")
-            d <- vgdf$rdist[nn]
+            d <- vgdf$root_dist[nn]
             # Add distances (assuming one-one corr.)
             wd <- w+d
             # Set node's distance from root to max of added distances
             mwd <- max(wd)
-            vgdf$rdist[node] <- mwd
+            vgdf$root_dist[node] <- mwd
             # Set node's path from root to path of max of added distances
             mwdn <- as.vector(nn)[match(mwd,wd)]
-            nrp <- list(c(unlist(vgdf$rpath[mwdn]), node))
-            vgdf$rpath[node] <- nrp
+            nrp <- list(c(unlist(vgdf$root_path[mwdn]), node))
+            vgdf$root_path[node] <- nrp
             # Set node's depth as one greater than the largest depth its predecessors
             vgdf$depth[node] <- max(vgdf$depth[nn]) + 1
             if (cl_args$verbose) {
@@ -452,14 +452,14 @@ if (!is.na(path_weight)) {
             }
         }
         ## Longest path is the largest root distance
-        critical_path <- max(vgdf$rdist)
+        critical_path <- max(vgdf$root_dist)
         # Enumerate longest path
-        lpm <- unlist(vgdf$rpath[match(critical_path,vgdf$rdist)])
+        lpm <- unlist(vgdf$root_path[match(critical_path,vgdf$root_dist)])
         vgdf$on_crit_path <- 0
         vgdf$on_crit_path[lpm] <- 1
         # Set back on grain_graph
         grain_graph <- set.vertex.attribute(grain_graph, name="on_crit_path", index=V(grain_graph), value=vgdf$on_crit_path)
-        grain_graph <- set.vertex.attribute(grain_graph, name="rdist", index=V(grain_graph), value=vgdf$rdist)
+        grain_graph <- set.vertex.attribute(grain_graph, name="root_dist", index=V(grain_graph), value=vgdf$root_dist)
         grain_graph <- set.vertex.attribute(grain_graph, name="depth", index=V(grain_graph), value=vgdf$depth)
         critical_edges <- E(grain_graph)[V(grain_graph)[on_crit_path==1] %--% V(grain_graph)[on_crit_path==1]]
         grain_graph <- set.edge.attribute(grain_graph, name="on_crit_path", index=critical_edges, value=1)
@@ -473,8 +473,8 @@ if (!is.na(path_weight)) {
 
     # Shape calculation
     if (cl_args$enumcriticalpath) {
-        # Clear rpath since dot/table writing complains
-        grain_graph <- remove.vertex.attribute(grain_graph,"rpath")
+        # Clear root_path since dot/table writing complains
+        grain_graph <- remove.vertex.attribute(grain_graph,"root_path")
 
         # Calc shape
         grain_graph_df <- get.data.frame(grain_graph, what="vertices")
@@ -482,8 +482,8 @@ if (!is.na(path_weight)) {
         #grain_graph_shape_interval_width <- work/(length(unique(prof_data$cpu_id))*mean(prof_data[,path_weight]))
         grain_graph_shape_interval_width <- median(as.numeric(grain_graph_df[,path_weight], na.rm=T))
         stopifnot(grain_graph_shape_interval_width > 0)
-        grain_graph_shape_breaks <- seq(0, max(grain_graph_df$rdist) + 1 + grain_graph_shape_interval_width, by=grain_graph_shape_interval_width)
-        grain_graph_shape <- hist(grain_graph_df$rdist, breaks=grain_graph_shape_breaks, plot=F)
+        grain_graph_shape_breaks <- seq(0, max(grain_graph_df$root_dist) + 1 + grain_graph_shape_interval_width, by=grain_graph_shape_interval_width)
+        grain_graph_shape <- hist(grain_graph_df$root_dist, breaks=grain_graph_shape_breaks, plot=F)
 
         # Write out shape
         temp_out_file <- paste(gsub(". $", "", cl_args$out), "-shape.pdf", sep="")
