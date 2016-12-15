@@ -515,14 +515,14 @@ if (cl_args$layout) {
 #my_print(paste("Wrote file:", temp_out_file))
 #if (cl_args$timing) toc("Write dot")
 
-# Write gml file
+# Write graphml file
 if (cl_args$timing) tic(type="elapsed")
 temp_out_file <- paste(gsub(". $", "", cl_args$out), ".graphml", sep="")
 res <- write.graph(grain_graph, file=temp_out_file, format="graphml")
 my_print(paste("Wrote file:", temp_out_file))
 if (cl_args$timing) toc("Write graphml")
 
-# Write graphml file with no attributes
+# Write graphml file without attributes
 if (cl_args$timing) tic(type="elapsed")
 temp_out_file <- paste(gsub(". $", "", cl_args$out), "-noattrib.graphml", sep="")
 grain_graph_noattrib <- grain_graph
