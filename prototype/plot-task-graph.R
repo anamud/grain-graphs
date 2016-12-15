@@ -540,14 +540,14 @@ if (cl_args$layout) {
 ## Write dot file
 #if (cl_args$timing) tic(type="elapsed")
 #temp_out_file <- paste(gsub(". $", "", cl_args$out), ".dot", sep="")
-#res <- write.grain_graph(grain_graph, file=temp_out_file, format="dot")
+#res <- write.graph(grain_graph, file=temp_out_file, format="dot")
 #my_print(paste("Wrote file:", temp_out_file))
 #if (cl_args$timing) toc("Write dot")
 
 # Write gml file
 if (cl_args$timing) tic(type="elapsed")
 temp_out_file <- paste(gsub(". $", "", cl_args$out), ".graphml", sep="")
-res <- write.grain_graph(grain_graph, file=temp_out_file, format="graphml")
+res <- write.graph(grain_graph, file=temp_out_file, format="graphml")
 my_print(paste("Wrote file:", temp_out_file))
 if (cl_args$timing) toc("Write graphml")
 
@@ -561,7 +561,7 @@ for (attrib in vertex_attr_names(grain_graph)) {
 for (attrib in edge_attr_names(grain_graph)) {
     grain_graph_noattrib <- delete_edge_attr(grain_graph_noattrib, attrib)
 }
-res <- write.grain_graph(grain_graph_noattrib, file=temp_out_file, format="graphml")
+res <- write.graph(grain_graph_noattrib, file=temp_out_file, format="graphml")
 my_print(paste("Wrote file:", temp_out_file))
 if (cl_args$timing) toc("Write graphml without attributes")
 
