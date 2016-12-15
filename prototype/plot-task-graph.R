@@ -433,19 +433,19 @@ if (!is.na(path_weight)) {
             incident_edges <- incident(grain_graph, node, mode="in")
             incident_edge_weights <- -E(grain_graph)[incident_edges]$weight
             # Get distance from root to node's predecessors
-            nn <- neighbors(grain_graph, node, mode="in")
-            d <- graph_vertices$root_dist[nn]
+            adjacent_nodes <- neighbors(grain_graph, node, mode="in")
+            adjacent_nodes_root_dist <- graph_vertices$root_dist[adjacent_nodes]
             # Add distances (assuming one-one corr.)
-            wd <- incident_edge_weights + d
+            root_dist <- incident_edge_weights + adjacent_nodes_root_dist
             # Set node's distance from root to max of added distances
-            mwd <- max(wd)
-            graph_vertices$root_dist[node] <- mwd
+            max_root_dist <- max(root_dist)
+            graph_vertices$root_dist[node] <- max_root_dist
             # Set node's path from root to path of max of added distances
-            mwdn <- as.vector(nn)[match(mwd,wd)]
-            nrp <- list(c(unlist(graph_vertices$root_path[mwdn]), node))
-            graph_vertices$root_path[node] <- nrp
+            nodes_on_root_path <- as.vector(adjacent_nodes)[match(max_root_distances,root_dist)]
+            root_path <- list(c(unlist(graph_vertices$root_path[nodes_on_root_path]),node))
+            graph_vertices$root_path[node] <- root_path
             # Set node's depth as one greater than the largest depth its predecessors
-            graph_vertices$depth[node] <- max(graph_vertices$depth[nn]) + 1
+            graph_vertices$depth[node] <- max(graph_vertices$depth[adjacent_nodes]) + 1
             if (cl_args$verbose) {
                 ctr <- ctr + 1
                 setTxtProgressBar(pb, ctr)
