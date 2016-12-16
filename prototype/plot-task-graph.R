@@ -73,8 +73,8 @@ get_other_value <- function(prop_cfg, type, property)
 }
 
 # Grain sizes
-fork_dia <- as.numeric(unlist(subset(grain_prop_cfg, type == "fork" & property == "size", select = value1)))
-join_dia <- as.numeric(unlist(subset(grain_prop_cfg, type == "join" & property == "size", select = value1)))
+fork_dia <- as.numeric(unlist(subset(grain_prop_cfg, type == "fork" & property == "diameter", select = value1)))
+join_dia <- as.numeric(unlist(subset(grain_prop_cfg, type == "join" & property == "diameter", select = value1)))
 start_width <- as.numeric(unlist(subset(grain_prop_cfg, type == "start" & property == "width", select = value1)))
 start_height <- as.numeric(unlist(subset(grain_prop_cfg, type == "start" & property == "height", select = value1)))
 end_width <- as.numeric(unlist(subset(grain_prop_cfg, type == "end" & property == "width", select = value1)))
@@ -384,14 +384,14 @@ grain_graph <- set.vertex.attribute(grain_graph, name='shape', index=end_index, 
 
 # Set fork grain attributes
 fork_nodes_index <- startsWith(V(grain_graph)$name, 'f')
-grain_graph <- set.vertex.attribute(grain_graph, name='size', index=fork_nodes_index, value=fork_dia)
+grain_graph <- set.vertex.attribute(grain_graph, name='diameter', index=fork_nodes_index, value=fork_dia)
 grain_graph <- set.vertex.attribute(grain_graph, name='color', index=fork_nodes_index, value=fork_color)
 grain_graph <- set.vertex.attribute(grain_graph, name='label', index=fork_nodes_index, value='^')
 grain_graph <- set.vertex.attribute(grain_graph, name='shape', index=fork_nodes_index, value=fork_shape)
 
 # Set join grain attributes
 join_nodes_index <- startsWith(V(grain_graph)$name, 'j')
-grain_graph <- set.vertex.attribute(grain_graph, name='size', index=join_nodes_index, value=join_dia)
+grain_graph <- set.vertex.attribute(grain_graph, name='diameter', index=join_nodes_index, value=join_dia)
 grain_graph <- set.vertex.attribute(grain_graph, name='color', index=join_nodes_index, value=join_color)
 grain_graph <- set.vertex.attribute(grain_graph, name='label', index=join_nodes_index, value='*')
 grain_graph <- set.vertex.attribute(grain_graph, name='shape', index=join_nodes_index, value=join_shape)
