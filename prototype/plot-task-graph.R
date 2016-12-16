@@ -75,8 +75,10 @@ get_other_value <- function(prop_cfg, type, property)
 # Grain sizes
 fork_dia <- as.numeric(unlist(subset(grain_prop_cfg, type == "fork" & property == "size", select = value1)))
 join_dia <- as.numeric(unlist(subset(grain_prop_cfg, type == "join" & property == "size", select = value1)))
-start_size <- as.numeric(unlist(subset(grain_prop_cfg, type == "start" & property == "size", select = value1)))
-end_size <- as.numeric(unlist(subset(grain_prop_cfg, type == "end" & property == "size", select = value1)))
+start_width <- as.numeric(unlist(subset(grain_prop_cfg, type == "start" & property == "width", select = value1)))
+start_height <- as.numeric(unlist(subset(grain_prop_cfg, type == "start" & property == "height", select = value1)))
+end_width <- as.numeric(unlist(subset(grain_prop_cfg, type == "end" & property == "width", select = value1)))
+end_height<- as.numeric(unlist(subset(grain_prop_cfg, type == "end" & property == "height", select = value1)))
 task_size <- as.numeric(unlist(subset(grain_prop_cfg, type == "fragment" & property == "size", select = value1)))
 task_size_mult <- as.numeric(unlist(subset(grain_prop_cfg, type == "fragment" & property == "mult", select = value1)))
 task_size_bins <- as.numeric(unlist(subset(grain_prop_cfg, type == "fragment" & property == "bins", select = value1)))
@@ -368,14 +370,16 @@ for(attrib in attrib_color_distinct) {
 start_index <- V(grain_graph)$name == '0'
 grain_graph <- set.vertex.attribute(grain_graph, name='color', index=start_index, value=start_color)
 grain_graph <- set.vertex.attribute(grain_graph, name='label', index=start_index, value='S')
-grain_graph <- set.vertex.attribute(grain_graph, name='size', index=start_index, value=start_size)
+grain_graph <- set.vertex.attribute(grain_graph, name='width', index=start_index, value=start_width)
+grain_graph <- set.vertex.attribute(grain_graph, name='height', index=start_index, value=start_height)
 grain_graph <- set.vertex.attribute(grain_graph, name='shape', index=start_index, value=start_shape)
 
 # Set attributes of end grain
 end_index <- V(grain_graph)$name == "E"
 grain_graph <- set.vertex.attribute(grain_graph, name='color', index=end_index, value=end_color)
 grain_graph <- set.vertex.attribute(grain_graph, name='label', index=end_index, value='E')
-grain_graph <- set.vertex.attribute(grain_graph, name='size', index=end_index, value=end_size)
+grain_graph <- set.vertex.attribute(grain_graph, name='width', index=end_index, value=end_width)
+grain_graph <- set.vertex.attribute(grain_graph, name='height', index=end_index, value=end_height)
 grain_graph <- set.vertex.attribute(grain_graph, name='shape', index=end_index, value=end_shape)
 
 # Set fork grain attributes
