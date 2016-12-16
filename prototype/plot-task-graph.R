@@ -80,8 +80,6 @@ start_height <- as.numeric(unlist(subset(grain_prop_cfg, type == "start" & prope
 end_width <- as.numeric(unlist(subset(grain_prop_cfg, type == "end" & property == "width", select = value1)))
 end_height<- as.numeric(unlist(subset(grain_prop_cfg, type == "end" & property == "height", select = value1)))
 task_size <- as.numeric(unlist(subset(grain_prop_cfg, type == "fragment" & property == "size", select = value1)))
-task_size_mult <- as.numeric(unlist(subset(grain_prop_cfg, type == "fragment" & property == "mult", select = value1)))
-task_size_bins <- as.numeric(unlist(subset(grain_prop_cfg, type == "fragment" & property == "bins", select = value1)))
 
 # Grain shapes
 fork_shape <- as.character(unlist(subset(grain_prop_cfg, type == "fork" & property == "shape", select = value1)))
@@ -269,19 +267,6 @@ grain_graph <- set.vertex.attribute(grain_graph, name='shape', index=task_index,
 size_scaled <- c("ins_count", "work_cycles", "overhead_cycles", "exec_cycles")
 for(attrib in size_scaled) {
     if (attrib %in% colnames(prof_data)) {
-
-        # Set size
-        attrib_unique <- unique(prof_data[,attrib])
-        if (length(attrib_unique) == 1) {
-            p_task_size <- task_size_mult
-        } else if(length(attrib_unique) == 2 & identical(c(0,NA), as.numeric(attrib_unique[order(attrib_unique)]))) {
-            p_task_size <- task_size_mult
-        } else {
-            p_task_size <- task_size_mult * as.numeric(cut(prof_data[,attrib], task_size_bins))
-        }
-        annot_name <- paste(attrib, "_to_size", sep="")
-        grain_graph <- set.vertex.attribute(grain_graph, name=annot_name, index=task_index, value=p_task_size)
-
         # Set height
         attrib_val <- prof_data[,attrib]
         attrib_val_norm <- 1 + ((attrib_val - min(attrib_val)) / (max(attrib_val) - min(attrib_val)))
