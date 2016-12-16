@@ -335,28 +335,28 @@ for(attrib in attrib_color_distinct) {
     }
 }
 
-# Set label and color of 'task 0'
+# Set attributes of start grain
 start_index <- V(grain_graph)$name == '0'
 grain_graph <- set.vertex.attribute(grain_graph, name='color', index=start_index, value=start_color)
 grain_graph <- set.vertex.attribute(grain_graph, name='label', index=start_index, value='S')
 grain_graph <- set.vertex.attribute(grain_graph, name='size', index=start_index, value=start_size)
 grain_graph <- set.vertex.attribute(grain_graph, name='shape', index=start_index, value=start_shape)
 
-# Set label and color of 'task E'
+# Set attributes of end grain
 end_index <- V(grain_graph)$name == "E"
 grain_graph <- set.vertex.attribute(grain_graph, name='color', index=end_index, value=end_color)
 grain_graph <- set.vertex.attribute(grain_graph, name='label', index=end_index, value='E')
 grain_graph <- set.vertex.attribute(grain_graph, name='size', index=end_index, value=end_size)
 grain_graph <- set.vertex.attribute(grain_graph, name='shape', index=end_index, value=end_shape)
 
-# Set fork vertex attributes
+# Set fork grain attributes
 fork_nodes_index <- startsWith(V(grain_graph)$name, 'f')
 grain_graph <- set.vertex.attribute(grain_graph, name='size', index=fork_nodes_index, value=fork_size)
 grain_graph <- set.vertex.attribute(grain_graph, name='color', index=fork_nodes_index, value=fork_color)
 grain_graph <- set.vertex.attribute(grain_graph, name='label', index=fork_nodes_index, value='^')
 grain_graph <- set.vertex.attribute(grain_graph, name='shape', index=fork_nodes_index, value=fork_shape)
 
-# Set join vertex attributes
+# Set join grain attributes
 join_nodes_index <- startsWith(V(grain_graph)$name, 'j')
 grain_graph <- set.vertex.attribute(grain_graph, name='size', index=join_nodes_index, value=join_size)
 grain_graph <- set.vertex.attribute(grain_graph, name='color', index=join_nodes_index, value=join_color)
