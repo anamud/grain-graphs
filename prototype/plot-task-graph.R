@@ -218,11 +218,9 @@ if (cl_args$timing) toc("Connect join to next fork")
 if (cl_args$verbose) my_print("Setting attributes ...")
 if (cl_args$timing) tic(type="elapsed")
 
-# Common vertex attributes
-V(grain_graph)$label <- V(grain_graph)$name
-
-# Set task vertex attributes
+# Set task grain attributes
 task_index <- match(as.character(prof_data$task), V(grain_graph)$name)
+V(grain_graph)$label <- V(grain_graph)$name
 
 # Set annotations
 for (annot in colnames(prof_data)) {
