@@ -53,24 +53,14 @@ get_value <- function(prop_cfg, type, property)
         quit("no", 1)
     }
     value1 <- as.character(unlist(value1))
+    value2 <- as.character(unlist(subset(prop_cfg, type == type & property == property, select = value2)))
     if (value1[1] == '[' && value1[nchar(value1)] == ']') {
-        ret_val <- list(substr(value1, 2, nchar(value1) - 1), T)
+        ret_val <- list(substr(value1, 2, nchar(value1) - 1), value2)
     } else {
-        ret_val <- list(value1, F)
+        ret_val <- list(value1, NA)
     }
 
     return(ret_val)
-}
-
-get_other_value <- function(prop_cfg, type, property)
-{
-    value2 <- subset(prop_cfg, type == type & property == property, select = value2)
-    if (nrows(value1) != 1) {
-        my_print(paste("Error: Multilpe values for property", property, "for type", type, "!"))
-        quit("no", 1)
-    }
-    value2 <- as.character(unlist(value2))
-    return(value2)
 }
 
 # Grain sizes
