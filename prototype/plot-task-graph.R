@@ -218,7 +218,6 @@ if (!is.na(common_edge_weight[2])) {
     }
 }
 
-
 # Read data
 prof_data <- read.csv(cl_args$data, header=TRUE)
 
