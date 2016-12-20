@@ -356,7 +356,31 @@ if (cl_args$timing) tic(type="elapsed")
 
 # Set task grain attributes
 task_index <- match(as.character(prof_data$task), V(grain_graph)$name)
+
 V(grain_graph)$label <- V(grain_graph)$name
+grain_graph <- set.vertex.attribute(grain_graph, name='shape', index=task_index, value=task_shape)
+
+# Set size
+if (!is.na(task_width[2])) {
+    temp <- apply_size_mapping(as.numeric(prof_data[,task_width[1]]), task_width[2])
+    grain_graph <- set.vertex.attribute(grain_graph, name=annot_name, index=task_index, value=temp)
+} else {
+    grain_graph <- set.vertex.attribute(grain_graph, name='width', index=task_index, value=task_width[1])
+}
+if (!is.na(task_width[2])) {
+    temp <- apply_size_mapping(as.numeric(prof_data[,task_height[1]]), task_height[2])
+    grain_graph <- set.vertex.attribute(grain_graph, name='height', index=task_index, value=temp)
+} else {
+    grain_graph <- set.vertex.attribute(grain_graph, name='height', index=task_index, value=task_height[1])
+}
+
+# Set color constants
+if (!is.na(task_color[2])) {
+    temp <- apply_color_mapping(as.numeric(prof_data[,task_color[1]]), task_color[2])
+    grain_graph <- set.vertex.attribute(grain_graph, name='color', index=task_index, value=temp)
+} else {
+    grain_graph <- set.vertex.attribute(grain_graph, name='color', index=task_index, value=task_color[1])
+}
 
 # Set annotations
 for (annot in colnames(prof_data)) {
@@ -364,129 +388,42 @@ for (annot in colnames(prof_data)) {
     grain_graph <- set.vertex.attribute(grain_graph, name=annot, index=task_index, value=values)
 }
 
-# Set size constants
-grain_graph <- set.vertex.attribute(grain_graph, name='size', index=task_index, value=task_size)
-grain_graph <- set.vertex.attribute(grain_graph, name='width', index=task_index, value=task_size)
-grain_graph <- set.vertex.attribute(grain_graph, name='height', index=task_index, value=task_size)
-grain_graph <- set.vertex.attribute(grain_graph, name='shape', index=task_index, value=task_shape)
-
-# Scale size to attributes
-size_scaled <- c("ins_count", "work_cycles", "overhead_cycles", "exec_cycles")
-for(attrib in size_scaled) {
-    if (attrib %in% colnames(prof_data)) {
-        # Set height
-        attrib_val <- prof_data[,attrib]
-        attrib_val_norm <- 1 + ((attrib_val - min(attrib_val)) / (max(attrib_val) - min(attrib_val)))
-        annot_name <- paste(attrib, "_to_height", sep="")
-        grain_graph <- set.vertex.attribute(grain_graph, name=annot_name, index=task_index, value=attrib_val_norm*task_size)
-    }
-}
-
-# Set color constants
-grain_graph <- set.vertex.attribute(grain_graph, name='color', index=task_index, value=task_color)
-
-# Scale color to attributes
-# "-" in attribute name implies higher is better
-attrib_color_scaled <- c("mem_fp", "-compute_int", "PAPI_RES_STL_sum", "-mem_hier_util", "work_deviation", "overhead_deviation", "-parallel_benefit", "-min_shape_contrib", "-max_shape_contrib","-median_shape_contrib", "sibling_work_balance")
-if (!cl_args$forloop) {
-    attrib_color_scaled <- c(attrib_color_scaled, c("sibling_scatter"))
-} else {
-    attrib_color_scaled <- c(attrib_color_scaled, c("chunk_work_balance", "chunk_work_cpu_balance"))
-}
-for(attrib in attrib_color_scaled) {
-    invert_colors <- F
-    if (substring(attrib, 1, 1) == "-") {
-        invert_colors <- T
-        attrib <- substring(attrib, 2, nchar(attrib))
-    }
-
-    if (attrib %in% colnames(prof_data)) {
-
-        # Set color in proportion to attrib
-        attrib_unique <- unique(prof_data[,attrib])
-        if (invert_colors) {
-            if (length(attrib_unique) == 1) {
-                p_task_color <- task_color_pal[task_color_bins]
-            } else if(length(attrib_unique) == 2 & identical(c(0,NA), as.numeric(attrib_unique[order(attrib_unique)]))) {
-                p_task_color <- task_color_pal[task_color_bins]
-            } else {
-                p_task_color <- rev(task_color_pal)[as.numeric(cut(prof_data[,attrib], task_color_bins))]
-            }
-        } else {
-            if (length(attrib_unique) == 1) {
-                p_task_color <- task_color_pal[1]
-            } else if(length(attrib_unique) == 2 & identical(c(0,NA), as.numeric(attrib_unique[order(attrib_unique)]))) {
-                p_task_color <- task_color_pal[1]
-            } else {
-                p_task_color <- task_color_pal[as.numeric(cut(prof_data[,attrib], task_color_bins))]
-            }
-        }
-        annot_name <- paste(attrib, "_to_color", sep="")
-        grain_graph <- set.vertex.attribute(grain_graph, name=annot_name, index=task_index, value=p_task_color)
-
-        # Write colors for reference
-        temp_out_file <- paste(gsub(". $", "", cl_args$out), annot_name, sep=".")
-        if (length(attrib_unique) == 1) {
-            write.csv(data.frame(value=attrib_unique, color=p_task_color), temp_out_file, row.names=F)
-        } else if(length(attrib_unique) == 2 & identical(c(0,NA), as.numeric(attrib_unique[order(attrib_unique)]))) {
-            write.csv(data.frame(value=attrib_unique, color=p_task_color), temp_out_file, row.names=F)
-        } else {
-            v <- unique(cut(prof_data[,attrib], task_color_bins))
-            write.csv(data.frame(value=v, color=task_color_pal[as.numeric(v)]), temp_out_file, row.names=F)
-        }
-        my_print(paste("Wrote file:", temp_out_file))
-    }
-}
-
-# Set attributes to distinct color
-attrib_color_distinct <- c("cpu_id", "outl_func", "tag", "outline_function")
-for(attrib in attrib_color_distinct) {
-    if (attrib %in% colnames(prof_data)) {
-
-        # Map distinct color to attrib
-        attrib_val <- as.character(prof_data[,attrib])
-        unique_attrib_val <- unique(attrib_val)
-        #attrib_color <- rainbow(length(unique_attrib_val), start=0.4, end=0.8)
-        attrib_color <- rev(topo.colors(length(unique_attrib_val)))
-        annot_name <- paste(attrib, "_to_color", sep="")
-        grain_graph <- set.vertex.attribute(grain_graph, name=annot_name, index=task_index, value=attrib_color[match(attrib_val, unique_attrib_val)])
-
-        # Write colors for reference
-        temp_out_file <- paste(gsub(". $", "", cl_args$out), annot_name, sep=".")
-        write.csv(data.frame(value=unique_attrib_val, color=attrib_color), temp_out_file, row.names=F)
-        my_print(paste("Wrote file:", temp_out_file))
-    }
-}
+# TODO: Map task size linearly based on "ins_count", "work_cycles", "overhead_cycles", "exec_cycles"
+# TODO: Map task color linearly based on "mem_fp", "-compute_int", "PAPI_RES_STL_sum", "-mem_hier_util", "work_deviation", "overhead_deviation", "-parallel_benefit", "-min_shape_contrib", "-max_shape_contrib","-median_shape_contrib", "sibling_work_balance"
+# "-" higher is better
+# TODO: Map task color linearly based on "sibling_scatter" for task-based profiling data
+# TODO: Map task color linearly based on "chunk_work_balance", "chunk_work_cpu_balance" for for-loop based profiling data
+# TODO: Map task color using linear-step mapping for "cpu_id", "outl_func", "tag", "outline_function"
 
 # Set attributes of start grain
 start_index <- V(grain_graph)$name == '0'
 grain_graph <- set.vertex.attribute(grain_graph, name='color', index=start_index, value=start_color)
 grain_graph <- set.vertex.attribute(grain_graph, name='label', index=start_index, value='S')
+grain_graph <- set.vertex.attribute(grain_graph, name='shape', index=start_index, value=start_shape)
 grain_graph <- set.vertex.attribute(grain_graph, name='width', index=start_index, value=start_width)
 grain_graph <- set.vertex.attribute(grain_graph, name='height', index=start_index, value=start_height)
-grain_graph <- set.vertex.attribute(grain_graph, name='shape', index=start_index, value=start_shape)
 
 # Set attributes of end grain
 end_index <- V(grain_graph)$name == "E"
 grain_graph <- set.vertex.attribute(grain_graph, name='color', index=end_index, value=end_color)
 grain_graph <- set.vertex.attribute(grain_graph, name='label', index=end_index, value='E')
+grain_graph <- set.vertex.attribute(grain_graph, name='shape', index=end_index, value=end_shape)
 grain_graph <- set.vertex.attribute(grain_graph, name='width', index=end_index, value=end_width)
 grain_graph <- set.vertex.attribute(grain_graph, name='height', index=end_index, value=end_height)
-grain_graph <- set.vertex.attribute(grain_graph, name='shape', index=end_index, value=end_shape)
 
 # Set fork grain attributes
 fork_nodes_index <- startsWith(V(grain_graph)$name, 'f')
-grain_graph <- set.vertex.attribute(grain_graph, name='diameter', index=fork_nodes_index, value=fork_dia)
 grain_graph <- set.vertex.attribute(grain_graph, name='color', index=fork_nodes_index, value=fork_color)
 grain_graph <- set.vertex.attribute(grain_graph, name='label', index=fork_nodes_index, value='^')
 grain_graph <- set.vertex.attribute(grain_graph, name='shape', index=fork_nodes_index, value=fork_shape)
+grain_graph <- set.vertex.attribute(grain_graph, name='diameter', index=fork_nodes_index, value=fork_dia)
 
 # Set join grain attributes
 join_nodes_index <- startsWith(V(grain_graph)$name, 'j')
-grain_graph <- set.vertex.attribute(grain_graph, name='diameter', index=join_nodes_index, value=join_dia)
 grain_graph <- set.vertex.attribute(grain_graph, name='color', index=join_nodes_index, value=join_color)
 grain_graph <- set.vertex.attribute(grain_graph, name='label', index=join_nodes_index, value='*')
 grain_graph <- set.vertex.attribute(grain_graph, name='shape', index=join_nodes_index, value=join_shape)
+grain_graph <- set.vertex.attribute(grain_graph, name='diameter', index=join_nodes_index, value=join_dia)
 
 # Set edge attributes
 # Set weight to zero for edges not assigned weight before (essential for critical path calculation)
