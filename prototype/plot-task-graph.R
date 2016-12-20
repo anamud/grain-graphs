@@ -564,7 +564,6 @@ if (!cl_args$enumcriticalpath) {
         if (cl_args$verbose) {
             ctr <- ctr + 1
             setTxtProgressBar(progress_bar, ctr)
-            close(progress_bar)
         }
     }
     ## Critical path is the one with the largest root distance
