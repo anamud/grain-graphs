@@ -40,6 +40,7 @@ if (Rstudio_mode) {
 if (cl_args$verbose) my_print("Initializing ...")
 
 # Set grain and edge property configuration
+# Read property configuration files
 grain_prop_cfg <- read.csv(cl_args$grainpropertyconfig, header=TRUE)
 edge_prop_cfg <- read.csv(cl_args$edgepropertyconfig, header=TRUE)
 
