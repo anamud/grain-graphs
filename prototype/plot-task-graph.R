@@ -63,6 +63,102 @@ get_value <- function(prop_cfg, type, property)
     return(ret_val)
 }
 
+# Mapping utility functions
+apply_task_size_mapping <- function(data,type,out_file=NA)
+{
+    data_unique <- unique(data)
+    if (type == "direct") {
+        ret_val <- data
+        if(!is.na(out_file)) {
+            write.csv(data.frame(value=data_unique, size=data_unique), out_file, row.names=F)
+            my_print(paste("Wrote file:", out_file))
+        }
+    } else if (type == "linear") {
+        data_unique_norm <- 1 + ((data_unique - min(data_unique)) / (max(data_unique) - min(data_unique)))
+        temp <- data_norm * 30
+        ret_val <-  temp[match(data, data_unique)]
+        if(!is.na(out_file)) {
+            write.csv(data.frame(value=data_unique, size=temp), out_file, row.names=F)
+            my_print(paste("Wrote file:", out_file))
+        }
+    } else if (type == "linear-step") {
+        my_print(paste("Error: Unsupported task size mapping type", type))
+        quit("no", 1)
+    } else {
+        my_print(paste("Error: Unsupported task size mapping type", type))
+        quit("no", 1)
+    }
+
+    return(ret_val)
+}
+
+apply_task_color_mapping <- function(data,type,out_file=NA)
+{
+    data_unique <- unique(data)
+    if (type == "direct") {
+        ret_val <- data
+        if(!is.na(out_file)) {
+            write.csv(data.frame(value=data_unique, color=data_unique), out_file, row.names=F)
+            my_print(paste("Wrote file:", out_file))
+        }
+    } else if (type == "linear") {
+        linear_color_map_palette <- rev(topo.colors(length(data_unique)))
+        ret_val <-  linear_color_map_palette[match(data, data_unique)]
+        if(!is.na(out_file)) {
+            write.csv(data.frame(value=data_unique, color=linear_color_map_palette), out_file, row.names=F)
+            my_print(paste("Wrote file:", out_file))
+        }
+    } else if (type == "linear-step") {
+        color_func <- colorRampPalette(c("yellow", "orange"))
+        #color_func <- colorRampPalette(c("gray10", "gray90"))
+        linear_color_map_num_steps <- 10
+        linear_color_map_palette <- color_func(linear_color_map_num_steps)
+        if ((length(data_unique) == 1) || (length(data_unique) == 2 & identical(c(0,NA), as.numeric(data_unique[order(data_unique)])))) {
+            ret_val <- linear_color_map_palette[1]
+            if(!is.na(out_file)) {
+                write.csv(data.frame(value=data_unique, color=ret_val), out_file, row.names=F)
+                my_print(paste("Wrote file:", out_file))
+            }
+        } else {
+            temp <- cut(data, linear_color_map_num_steps)
+            ret_val <- linear_color_map_palette[as.numeric(temp)]
+            if(!is.na(out_file)) {
+                data_binned_unique <- unique(temp)
+                write.csv(data.frame(value=data_binned_unique, color=linear_color_map_palette[as.numeric(data_binned_unique)]), out_file, row.names=F)
+                my_print(paste("Wrote file:", out_file))
+            }
+        }
+    } else {
+        my_print(paste("Error: Unsupported task color mapping type", type))
+        quit("no", 1)
+    }
+
+    return(ret_val)
+}
+
+apply_edge_weight_mapping <- function(data,type,out_file=NA)
+{
+    data_unique <- unique(data)
+    if (type == "direct") {
+        ret_val <- data
+        if(!is.na(out_file)) {
+            write.csv(data.frame(value=data_unique, weight=data_unique), out_file, row.names=F)
+            my_print(paste("Wrote file:", out_file))
+        }
+    } else if (type == "linear") {
+        my_print(paste("Error: Unsupported edge weight mapping type", type))
+        quit("no", 1)
+    } else if (type == "linear-step") {
+        my_print(paste("Error: Unsupported edge weight mapping type", type))
+        quit("no", 1)
+    } else {
+        my_print(paste("Error: Unsupported edge weight mapping type", type))
+        quit("no", 1)
+    }
+
+    return(ret_val)
+}
+
 # Set grain sizes
 fork_dia <- as.numeric(get_value(grain_prop_cfg, "fork", "diameter")[1])
 join_dia <- as.numeric(get_value(grain_prop_cfg, "join", "diameter")[1])
