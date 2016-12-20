@@ -49,7 +49,7 @@ get_value <- function(prop_cfg, type, property)
 {
     value1 <- subset(prop_cfg, type == type & property == property, select = value1)
     if (nrows(value1) != 1) {
-        my_print(paste("Error: Multilpe values for property", property, "for type", type, "!"))
+        my_print(paste("Error: Ambiguous values for property", property, "for type", type, "!"))
         quit("no", 1)
     }
     value1 <- as.character(unlist(value1))
