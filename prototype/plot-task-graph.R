@@ -63,39 +63,65 @@ get_value <- function(prop_cfg, type, property)
     return(ret_val)
 }
 
-# Grain sizes
-fork_dia <- as.numeric(unlist(subset(grain_prop_cfg, type == "fork" & property == "diameter", select = value1)))
-join_dia <- as.numeric(unlist(subset(grain_prop_cfg, type == "join" & property == "diameter", select = value1)))
-start_width <- as.numeric(unlist(subset(grain_prop_cfg, type == "start" & property == "width", select = value1)))
-start_height <- as.numeric(unlist(subset(grain_prop_cfg, type == "start" & property == "height", select = value1)))
-end_width <- as.numeric(unlist(subset(grain_prop_cfg, type == "end" & property == "width", select = value1)))
-end_height<- as.numeric(unlist(subset(grain_prop_cfg, type == "end" & property == "height", select = value1)))
-task_size <- as.numeric(unlist(subset(grain_prop_cfg, type == "fragment" & property == "size", select = value1)))
+# Set grain sizes
+fork_dia <- as.numeric(get_value(grain_prop_cfg, "fork", "diameter")[1])
+join_dia <- as.numeric(get_value(grain_prop_cfg, "join", "diameter")[1])
+start_width <- as.numeric(get_value(grain_prop_cfg, "start", "width")[1])
+start_height <- as.numeric(get_value(grain_prop_cfg, "start", "height")[1])
+end_width <- as.numeric(get_value(grain_prop_cfg, "end", "width")[1])
+end_height <- as.numeric(get_value(grain_prop_cfg, "end", "height")[1])
 
-# Grain shapes
-fork_shape <- as.character(unlist(subset(grain_prop_cfg, type == "fork" & property == "shape", select = value1)))
-join_shape <- as.character(unlist(subset(grain_prop_cfg, type == "join" & property == "shape", select = value1)))
-start_shape <- as.character(unlist(subset(grain_prop_cfg, type == "start" & property == "shape", select = value1)))
-end_shape <- as.character(unlist(subset(grain_prop_cfg, type == "end" & property == "shape", select = value1)))
-task_shape <- as.character(unlist(subset(grain_prop_cfg, type == "fragment" & property == "shape", select = value1)))
+task_width <- get_value(grain_prop_cfg, "task", "width")
+if (!is.na(task_width[2])) {
+    if (task_width[1] %in% colnames(tg_data)) {
+        my_print(paste("Error: Mapped variable", task_width[1], "not found in profiling data!"))
+        quit("no", 1)
+    }
+}
+task_height <- get_value(grain_prop_cfg, "task", "height")
+if (!is.na(task_height[2])) {
+    if (task_height[1] %in% colnames(tg_data)) {
+        my_print(paste("Error: Mapped variable", task_height[1], "not found in profiling data!"))
+        quit("no", 1)
+    }
+}
 
-# Grain colors
-fork_color <- as.character(unlist(subset(grain_prop_cfg, type == "fork" & property == "color", select = value1)))
-join_color <- as.character(unlist(subset(grain_prop_cfg, type == "join" & property == "color", select = value1)))
-start_color <- as.character(unlist(subset(grain_prop_cfg, type == "start" & property == "color", select = value1)))
-end_color <- as.character(unlist(subset(grain_prop_cfg, type == "end" & property == "color", select = value1)))
-task_color <- as.character(unlist(subset(grain_prop_cfg, type == "fragment" & property == "color", select = value1)))
-color_fun <- colorRampPalette(as.character(unlist(subset(grain_prop_cfg, type == "fragment" & property == "color_gradient", select = c(value1,value2)))))
-task_color_bins <- as.numeric(unlist(subset(grain_prop_cfg, type == "fragment" & property == "bins", select = value1)))
-task_color_pal <- color_fun(task_color_bins)
+# Set grain shapes
+fork_shape <- get_value(grain_prop_cfg, "fork", "shape")[1]
+join_shape <- get_value(grain_prop_cfg, "join", "shape")[1]
+start_shape <- get_value(grain_prop_cfg, "start", "shape")[1]
+end_shape <- get_value(grain_prop_cfg, "end", "shape")[1]
+task_shape <- get_value(grain_prop_cfg, "end", "shape")[1]
 
-# Edge properties
-create_edge_color <- as.character(unlist(subset(edge_prop_cfg, type == "create" & property == "color", select = value1)))
-sync_edge_color <- as.character(unlist(subset(edge_prop_cfg, type == "sync" & property == "color", select = value1)))
-scope_edge_color <- as.character(unlist(subset(edge_prop_cfg, type == "scope" & property == "color", select = value1)))
-cont_edge_color <- as.character(unlist(subset(edge_prop_cfg, type == "continuation" & property == "color", select = value1)))
-temp <- as.character(unlist(subset(edge_prop_cfg, type == "common" & property == "weight", select = value1)))
-path_weight <- substr(temp, 2, nchar(temp) - 1)
+# Set grain colors
+fork_color <- get_value(grain_prop_cfg, "fork", "color")[1]
+join_color <- get_value(grain_prop_cfg, "join", "color")[1]
+start_color <- get_value(grain_prop_cfg, "start", "color")[1]
+end_color <- get_value(grain_prop_cfg, "end", "color")[1]
+
+task_color <- get_value(grain_prop_cfg, "task", "color")
+if (!is.na(task_color[2])) {
+    if (task_color[1] %in% colnames(tg_data)) {
+        my_print(paste("Error: Mapped variable", task_color[1], "not found in profiling data!"))
+        quit("no", 1)
+    }
+}
+
+# Set edge colors
+create_edge_color <- get_value(edge_prop_cfg, "create", property == "color")[1]
+sync_edge_color <- get_value(edge_prop_cfg, "sync", property == "color")[1]
+scope_edge_color <- get_value(edge_prop_cfg, "scope", property == "color")[1]
+cont_edge_color <- get_value(edge_prop_cfg, "continuation", property == "color")[1]
+
+# Set edge weights
+common_edge_weight <- get_value(edge_prop_cfg, "common", property == "weight")
+if (!is.na(common_edge_weight[2])) {
+    if (common_edge_weight[1] %in% colnames(tg_data)) {
+        my_print(paste("Error: Mapped variable", common_edge_weight[1], "not found in profiling data!"))
+        quit("no", 1)
+    }
+}
+
 
 # Read data
 prof_data <- read.csv(cl_args$data, header=TRUE)
