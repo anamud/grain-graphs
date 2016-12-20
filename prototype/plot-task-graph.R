@@ -229,12 +229,6 @@ sink()
 # Remove background task
 prof_data <- prof_data[!is.na(prof_data$parent),]
 
-# Path weight avaiability
-if (!(path_weight %in% colnames(prof_data))) {
-    my_print(paste("Path weight variable", path_weight, "not found in profiling data!"))
-    path_weight <- NA
-}
-
 if (cl_args$forloop) {
     # Remove idle task without children
     prof_data <- prof_data[!(prof_data$tag == "idle_task" & prof_data$num_children == 0),]
@@ -288,11 +282,11 @@ first_forks <- fork_nodes_unique[first_forks_index]
 grain_graph[to=first_forks, from=parent_first_forks, attr='type'] <- 'scope'
 grain_graph[to=first_forks, from=parent_first_forks, attr='color'] <- scope_edge_color
 
-if (!is.na(path_weight)) {
-    temp <- as.numeric(prof_data[match(parent_first_forks, prof_data$task),path_weight])
-
-    grain_graph[to=first_forks, from=parent_first_forks, attr=path_weight] <- temp
+if (!is.na(common_edge_weight[2])) {
+    temp <- apply_edge_weight_mapping(as.numeric(prof_data[match(parent_first_forks, prof_data$task),common_edge_weight[1]]), common_edge_weight[2])
     grain_graph[to=first_forks, from=parent_first_forks, attr='weight'] <- -temp
+} else {
+    grain_graph[to=first_forks, from=parent_first_forks, attr='weight'] <- -common_edge_weight[1]
 }
 
 if (cl_args$timing) toc("Connect parent to first fork")
@@ -306,10 +300,11 @@ leaf_join_nodes <- join_nodes[match(leaf_tasks, prof_data$task)]
 grain_graph[from=leaf_tasks, to=leaf_join_nodes, attr='type'] <- 'sync'
 grain_graph[from=leaf_tasks, to=leaf_join_nodes, attr='color'] <- sync_edge_color
 
-if (!is.na(path_weight)) {
-    temp <- as.numeric(prof_data[match(leaf_tasks, prof_data$task),path_weight])
-    grain_graph[from=leaf_tasks, to=leaf_join_nodes, attr=path_weight] <- temp
+if (!is.na(common_edge_weight[2])) {
+    temp <- apply_edge_weight_mapping(as.numeric(prof_data[match(leaf_tasks, prof_data$task),common_edge_weight[1]]), common_edge_weight[2])
     grain_graph[from=leaf_tasks, to=leaf_join_nodes, attr='weight'] <- -temp
+} else {
+    grain_graph[from=leaf_tasks, to=leaf_join_nodes, attr='weight'] <- -common_edge_weight[1]
 }
 
 if (cl_args$timing) toc("Connect leaf task to join")
@@ -494,10 +489,8 @@ grain_graph <- set.vertex.attribute(grain_graph, name='label', index=join_nodes_
 grain_graph <- set.vertex.attribute(grain_graph, name='shape', index=join_nodes_index, value=join_shape)
 
 # Set edge attributes
-if (!is.na(path_weight)) {
-    grain_graph <- set.edge.attribute(grain_graph, name="weight", index=which(is.na(E(grain_graph)$weight)), value=0)
-    grain_graph <- set.edge.attribute(grain_graph, name=path_weight, index=which(is.na(get.edge.attribute(grain_graph, name=path_weight, index=E(grain_graph)))), value=0)
-}
+# Set weight to zero for edges not assigned weight before (essential for critical path calculation)
+grain_graph <- set.edge.attribute(grain_graph, name="weight", index=which(is.na(E(grain_graph)$weight)), value=0)
 
 if (cl_args$timing) toc("Attribute setting")
 
@@ -523,79 +516,79 @@ if (bad_structure == 1) {
 if (cl_args$timing) toc("Checking for bad structure")
 
 # Calculate critical path
-if (!is.na(path_weight)) {
-    if (cl_args$verbose) my_print("Calculating critical path ...")
-    if (cl_args$timing) tic(type="elapsed")
-    # Simplify - DO NOT USE. Fucks up the critical path analysis.
-    #grain_graph <- simplify(grain_graph, edge.attr.comb=toString)
+if (cl_args$verbose) my_print("Calculating critical path ...")
+if (cl_args$timing) tic(type="elapsed")
+# Simplify - DO NOT USE. Fucks up the critical path analysis.
+#grain_graph <- simplify(grain_graph, edge.attr.comb=toString)
 
-    # Compute critical path
-    #Rprof("profile-critpathcalc.out")
-    if (!cl_args$enumcriticalpath) {
-        # Compute critical path length using Bellman Ford algorithm with negative weights
-        shortest_path <- shortest.paths(grain_graph, v=start_index, to=end_index, mode="out")
-        critical_path <- -as.numeric(shortest_path)
-    } else {
-        num_vertices <- length(V(grain_graph))
-        if (cl_args$verbose) {
-            progress_bar <- txtProgressBar(min = 0, max = num_vertices, style = 3)
-            ctr <- 0
-        }
-        # Topological sort
-        top_sort_graph <- topological.sort(grain_graph)
-        # Set root path attributes
-        V(grain_graph)[top_sort_graph[1]]$root_dist <- 0
-        V(grain_graph)[top_sort_graph[1]]$depth <- 0
-        V(grain_graph)[top_sort_graph[1]]$root_path <- top_sort_graph[1]
-        # Get data frame of grain_graph object
-        graph_vertices <- get.data.frame(grain_graph, what="vertices")
-        # Get longest paths from root
-        for(node in top_sort_graph[-1])
-        {
-            # Get distance from node's predecessors
-            incident_edges <- incident(grain_graph, node, mode="in")
-            incident_edge_weights <- -E(grain_graph)[incident_edges]$weight
-            # Get distance from root to node's predecessors
-            adjacent_nodes <- neighbors(grain_graph, node, mode="in")
-            adjacent_nodes_root_dist <- graph_vertices$root_dist[adjacent_nodes]
-            # Add distances (assuming one-one corr.)
-            root_dist <- incident_edge_weights + adjacent_nodes_root_dist
-            # Set node's distance from root to max of added distances
-            max_root_dist <- max(root_dist)
-            graph_vertices$root_dist[node] <- max_root_dist
-            # Set node's path from root to path of max of added distances
-            nodes_on_root_path <- as.vector(adjacent_nodes)[match(max_root_dist,root_dist)]
-            root_path <- list(c(unlist(graph_vertices$root_path[nodes_on_root_path]),node))
-            graph_vertices$root_path[node] <- root_path
-            # Set node's depth as one greater than the largest depth its predecessors
-            graph_vertices$depth[node] <- max(graph_vertices$depth[adjacent_nodes]) + 1
-            if (cl_args$verbose) {
-                ctr <- ctr + 1
-                setTxtProgressBar(progress_bar, ctr)
-            }
-        }
-        ## Critical path is the one with the largest root distance
-        critical_path <- max(graph_vertices$root_dist)
-        # Enumerate nodes on critical path
-        critical_nodes <- unlist(graph_vertices$root_path[match(critical_path,graph_vertices$root_dist)])
-        graph_vertices$on_crit_path <- 0
-        graph_vertices$on_crit_path[critical_nodes] <- 1
-        # Mark critical nodes and edges on grain graph
-        grain_graph <- set.vertex.attribute(grain_graph, name="on_crit_path", index=V(grain_graph), value=graph_vertices$on_crit_path)
-        grain_graph <- set.vertex.attribute(grain_graph, name="root_dist", index=V(grain_graph), value=graph_vertices$root_dist)
-        grain_graph <- set.vertex.attribute(grain_graph, name="depth", index=V(grain_graph), value=graph_vertices$depth)
-        critical_edges <- E(grain_graph)[V(grain_graph)[on_crit_path==1] %--% V(grain_graph)[on_crit_path==1]]
-        grain_graph <- set.edge.attribute(grain_graph, name="on_crit_path", index=critical_edges, value=1)
+# Compute critical path
+#Rprof("profile-critpathcalc.out")
+if (!cl_args$enumcriticalpath) {
+    # Compute critical path length using Bellman Ford algorithm with negative weights
+    shortest_path <- shortest.paths(grain_graph, v=start_index, to=end_index, mode="out")
+    critical_path <- -as.numeric(shortest_path)
+} else {
+    num_vertices <- length(V(grain_graph))
+    if (cl_args$verbose) {
+        progress_bar <- txtProgressBar(min = 0, max = num_vertices, style = 3)
+        ctr <- 0
+    }
+    # Topological sort
+    top_sort_graph <- topological.sort(grain_graph)
+    # Set root path attributes
+    V(grain_graph)[top_sort_graph[1]]$root_dist <- 0
+    V(grain_graph)[top_sort_graph[1]]$depth <- 0
+    V(grain_graph)[top_sort_graph[1]]$root_path <- top_sort_graph[1]
+    # Get data frame of grain_graph object
+    graph_vertices <- get.data.frame(grain_graph, what="vertices")
+    # Get longest paths from root
+    for(node in top_sort_graph[-1])
+    {
+        # Get distance from node's predecessors
+        incident_edges <- incident(grain_graph, node, mode="in")
+        incident_edge_weights <- -E(grain_graph)[incident_edges]$weight
+        # Get distance from root to node's predecessors
+        adjacent_nodes <- neighbors(grain_graph, node, mode="in")
+        adjacent_nodes_root_dist <- graph_vertices$root_dist[adjacent_nodes]
+        # Add distances (assuming one-one corr.)
+        root_dist <- incident_edge_weights + adjacent_nodes_root_dist
+        # Set node's distance from root to max of added distances
+        max_root_dist <- max(root_dist)
+        graph_vertices$root_dist[node] <- max_root_dist
+        # Set node's path from root to path of max of added distances
+        nodes_on_root_path <- as.vector(adjacent_nodes)[match(max_root_dist,root_dist)]
+        root_path <- list(c(unlist(graph_vertices$root_path[nodes_on_root_path]),node))
+        graph_vertices$root_path[node] <- root_path
+        # Set node's depth as one greater than the largest depth its predecessors
+        graph_vertices$depth[node] <- max(graph_vertices$depth[adjacent_nodes]) + 1
         if (cl_args$verbose) {
             ctr <- ctr + 1
             setTxtProgressBar(progress_bar, ctr)
             close(progress_bar)
         }
     }
-    #Rprof(NULL)
-
-    if (cl_args$timing) toc("Critical path calculation")
+    ## Critical path is the one with the largest root distance
+    critical_path <- max(graph_vertices$root_dist)
+    # Enumerate nodes on critical path
+    critical_nodes <- unlist(graph_vertices$root_path[match(critical_path,graph_vertices$root_dist)])
+    graph_vertices$on_crit_path <- 0
+    graph_vertices$on_crit_path[critical_nodes] <- 1
+    # Mark critical nodes and edges on grain graph
+    grain_graph <- set.vertex.attribute(grain_graph, name="on_crit_path", index=V(grain_graph), value=graph_vertices$on_crit_path)
+    grain_graph <- set.vertex.attribute(grain_graph, name="root_dist", index=V(grain_graph), value=graph_vertices$root_dist)
+    grain_graph <- set.vertex.attribute(grain_graph, name="depth", index=V(grain_graph), value=graph_vertices$depth)
+    critical_edges <- E(grain_graph)[V(grain_graph)[on_crit_path==1] %--% V(grain_graph)[on_crit_path==1]]
+    grain_graph <- set.edge.attribute(grain_graph, name="on_crit_path", index=critical_edges, value=1)
+    if (cl_args$verbose) {
+        ctr <- ctr + 1
+        setTxtProgressBar(progress_bar, ctr)
+        close(progress_bar)
+    }
 }
+#Rprof(NULL)
+
+if (cl_args$timing) toc("Critical path calculation")
+
 
 # Write basic grain graph info
 sink(grain_graph_info_out_file, append=T)
@@ -606,15 +599,21 @@ my_print(paste("Number of tasks =", length(prof_data$task)))
 my_print(paste("Number of forks =", length(fork_nodes_unique)))
 my_print("# Out-degree distribution of forks")
 degree.distribution(grain_graph, v=fork_nodes_index, mode="out")
-if (!is.na(path_weight)) {
-    my_print(paste("# Cilk theory parallelism (metric = ", path_weight, ")", sep=""))
+if (!is.na(common_edge_weight[2])) {
+    my_print(paste("# Cilk theory parallelism (metric = ", common_edge_weight[1], ")", sep=""))
     my_print(paste("Span (critical path) =", critical_path))
-    work <- sum(as.numeric(prof_data[,path_weight]))
+    work <- sum(as.numeric(prof_data[,common_edge_weight[1]]))
     my_print(paste("Work =", work))
     my_print(paste("Parallelism (Work/Span) =", work/critical_path))
-    if (cl_args$enumcriticalpath)
-        my_print(paste("Number of critical tasks =", length(graph_vertices$task[graph_vertices$on_crit_path == 1])))
+} else {
+    my_print(paste("# Cilk theory parallelism (metric = constant", common_edge_weight[1], ")", sep=""))
+    my_print(paste("Span (critical path) =", critical_path))
+    work <- nrows(prof_data)*common_edge_weight[1]
+    my_print(paste("Work =", work))
+    my_print(paste("Parallelism (Work/Span) =", work/critical_path))
 }
+if (cl_args$enumcriticalpath)
+    my_print(paste("Number of critical tasks =", length(graph_vertices$task[graph_vertices$on_crit_path == 1])))
 my_print()
 sink()
 
