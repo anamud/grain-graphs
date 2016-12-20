@@ -48,7 +48,7 @@ edge_prop_cfg <- read.csv(cl_args$edgepropertyconfig, header=TRUE)
 get_value <- function(prop_cfg, type, property)
 {
     value1 <- subset(prop_cfg, type == type & property == property, select = value1)
-    if (nrows(value1) != 1) {
+    if (nrow(value1) != 1) {
         my_print(paste("Error: Ambiguous values for property", property, "for type", type, "!"))
         quit("no", 1)
     }
@@ -544,7 +544,7 @@ if (!is.na(common_edge_weight[2])) {
 } else {
     my_print(paste("# Cilk theory parallelism (metric = constant", common_edge_weight[1], ")", sep=""))
     my_print(paste("Span (critical path) =", critical_path))
-    work <- nrows(prof_data)*common_edge_weight[1]
+    work <- nrow(prof_data)*common_edge_weight[1]
     my_print(paste("Work =", work))
     my_print(paste("Parallelism (Work/Span) =", work/critical_path))
 }
