@@ -187,14 +187,14 @@ end_height <- as.numeric(get_value(grain_prop_cfg, "end", "height")[1])
 
 task_width <- get_value(grain_prop_cfg, "task", "width")
 if (!is.na(task_width[2])) {
-    if (task_width[1] %in% colnames(prof_data)) {
+    if (!(task_width[1] %in% colnames(prof_data))) {
         my_print(paste("Error: Mapped variable", task_width[1], "not found in profiling data!"))
         quit("no", 1)
     }
 }
 task_height <- get_value(grain_prop_cfg, "task", "height")
 if (!is.na(task_height[2])) {
-    if (task_height[1] %in% colnames(prof_data)) {
+    if (!(task_height[1] %in% colnames(prof_data))) {
         my_print(paste("Error: Mapped variable", task_height[1], "not found in profiling data!"))
         quit("no", 1)
     }
@@ -215,7 +215,7 @@ end_color <- get_value(grain_prop_cfg, "end", "color")[1]
 
 task_color <- get_value(grain_prop_cfg, "task", "color")
 if (!is.na(task_color[2])) {
-    if (task_color[1] %in% colnames(prof_data)) {
+    if (!(task_color[1] %in% colnames(prof_data))) {
         my_print(paste("Error: Mapped variable", task_color[1], "not found in profiling data!"))
         quit("no", 1)
     }
@@ -230,12 +230,11 @@ cont_edge_color <- get_value(edge_prop_cfg, "continuation", "color")[1]
 # Set edge weights
 common_edge_weight <- get_value(edge_prop_cfg, "common", "weight")
 if (!is.na(common_edge_weight[2])) {
-    if (common_edge_weight[1] %in% colnames(prof_data)) {
+    if (!(common_edge_weight[1] %in% colnames(prof_data))) {
         my_print(paste("Error: Mapped variable", common_edge_weight[1], "not found in profiling data!"))
         quit("no", 1)
     }
 }
-
 
 if (cl_args$verbose) my_print("Creating grain graph ...")
 
@@ -365,13 +364,13 @@ grain_graph <- set.vertex.attribute(grain_graph, name='shape', index=task_index,
 
 # Set size
 if (!is.na(task_width[2])) {
-    temp <- apply_size_mapping(as.numeric(prof_data[,task_width[1]]), task_width[2])
+    temp <- apply_task_size_mapping(as.numeric(prof_data[,task_width[1]]), task_width[2])
     grain_graph <- set.vertex.attribute(grain_graph, name=annot_name, index=task_index, value=temp)
 } else {
     grain_graph <- set.vertex.attribute(grain_graph, name='width', index=task_index, value=task_width[1])
 }
 if (!is.na(task_width[2])) {
-    temp <- apply_size_mapping(as.numeric(prof_data[,task_height[1]]), task_height[2])
+    temp <- apply_task_size_mapping(as.numeric(prof_data[,task_height[1]]), task_height[2])
     grain_graph <- set.vertex.attribute(grain_graph, name='height', index=task_index, value=temp)
 } else {
     grain_graph <- set.vertex.attribute(grain_graph, name='height', index=task_index, value=task_height[1])
@@ -379,7 +378,7 @@ if (!is.na(task_width[2])) {
 
 # Set color constants
 if (!is.na(task_color[2])) {
-    temp <- apply_color_mapping(as.numeric(prof_data[,task_color[1]]), task_color[2])
+    temp <- apply_task_color_mapping(as.numeric(prof_data[,task_color[1]]), task_color[2])
     grain_graph <- set.vertex.attribute(grain_graph, name='color', index=task_index, value=temp)
 } else {
     grain_graph <- set.vertex.attribute(grain_graph, name='color', index=task_index, value=task_color[1])
@@ -551,9 +550,9 @@ if (!is.na(common_edge_weight[2])) {
     my_print(paste("Work =", work))
     my_print(paste("Parallelism (Work/Span) =", work/critical_path))
 }
-if (cl_args$enumcriticalpath)
-    my_print(paste("Number of critical tasks =", length(graph_vertices$task[graph_vertices$on_crit_path == 1])))
-my_print()
+if (cl_args$enumcriticalpath) {
+    my_print(paste("Number of critical tasks =", length(graph_vertices$task[graph_vertices$on_crit_path == 1 & !is.na(graph_vertices$task)])))
+}
 sink()
 
 # Write grain graph to file
