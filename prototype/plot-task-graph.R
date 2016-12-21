@@ -171,14 +171,14 @@ end_height <- as.numeric(get_value(grain_prop_cfg, "end", "height")[1])
 
 task_width <- get_value(grain_prop_cfg, "task", "width")
 if (!is.na(task_width[2])) {
-    if (task_width[1] %in% colnames(tg_data)) {
+    if (task_width[1] %in% colnames(prof_data)) {
         my_print(paste("Error: Mapped variable", task_width[1], "not found in profiling data!"))
         quit("no", 1)
     }
 }
 task_height <- get_value(grain_prop_cfg, "task", "height")
 if (!is.na(task_height[2])) {
-    if (task_height[1] %in% colnames(tg_data)) {
+    if (task_height[1] %in% colnames(prof_data)) {
         my_print(paste("Error: Mapped variable", task_height[1], "not found in profiling data!"))
         quit("no", 1)
     }
@@ -199,7 +199,7 @@ end_color <- get_value(grain_prop_cfg, "end", "color")[1]
 
 task_color <- get_value(grain_prop_cfg, "task", "color")
 if (!is.na(task_color[2])) {
-    if (task_color[1] %in% colnames(tg_data)) {
+    if (task_color[1] %in% colnames(prof_data)) {
         my_print(paste("Error: Mapped variable", task_color[1], "not found in profiling data!"))
         quit("no", 1)
     }
@@ -214,7 +214,7 @@ cont_edge_color <- get_value(edge_prop_cfg, "continuation", property == "color")
 # Set edge weights
 common_edge_weight <- get_value(edge_prop_cfg, "common", property == "weight")
 if (!is.na(common_edge_weight[2])) {
-    if (common_edge_weight[1] %in% colnames(tg_data)) {
+    if (common_edge_weight[1] %in% colnames(prof_data)) {
         my_print(paste("Error: Mapped variable", common_edge_weight[1], "not found in profiling data!"))
         quit("no", 1)
     }
