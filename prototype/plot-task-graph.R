@@ -41,8 +41,8 @@ if (cl_args$verbose) my_print("Initializing ...")
 
 # Set grain and edge property configuration
 # Read property configuration files
-grain_prop_cfg <- read.csv(cl_args$grainpropertyconfig, header=TRUE)
-edge_prop_cfg <- read.csv(cl_args$edgepropertyconfig, header=TRUE)
+grain_prop_cfg <- read.csv(cl_args$grainpropertyconfig, header=TRUE, , comment.char='#')
+edge_prop_cfg <- read.csv(cl_args$edgepropertyconfig, header=TRUE, , comment.char='#')
 
 # Property query functions
 get_value <- function(prop_cfg, type, property)
