@@ -45,19 +45,21 @@ grain_prop_cfg <- read.csv(cl_args$grainpropertyconfig, header=TRUE, , comment.c
 edge_prop_cfg <- read.csv(cl_args$edgepropertyconfig, header=TRUE, , comment.char='#')
 
 # Property query functions
-get_value <- function(prop_cfg, type, property)
+get_value <- function(prop_cfg, type_type, property_property)
 {
-    value1 <- subset(prop_cfg, type == type & property == property, select = value1)
+    value1 <- subset(prop_cfg, type == type_type & property == property_property, select = value1)
     if (nrow(value1) != 1) {
-        my_print(paste("Error: Ambiguous values for property", property, "for type", type, "!"))
+        my_print(paste("Error: Ambiguous values for property", property_property, "for type", type_type, "!"))
         quit("no", 1)
     }
     value1 <- as.character(unlist(value1))
-    value2 <- as.character(unlist(subset(prop_cfg, type == type & property == property, select = value2)))
-    if (value1[1] == '[' && value1[nchar(value1)] == ']') {
-        ret_val <- list(substr(value1, 2, nchar(value1) - 1), value2)
+    value2 <- as.character(unlist(subset(prop_cfg, type == type_type & property == property_property, select = value2)))
+    value1_first <- substr(value1, 1, 1)
+    value1_last <- substr(value1, nchar(value1), nchar(value1))
+    if (value1_first == '[' && value1_last == ']') {
+        ret_val <- c(substr(value1, 2, nchar(value1) - 1), value2)
     } else {
-        ret_val <- list(value1, NA)
+        ret_val <- c(value1, NA)
     }
 
     return(ret_val)
