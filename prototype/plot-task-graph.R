@@ -39,11 +39,6 @@ if (Rstudio_mode) {
 
 if (cl_args$verbose) my_print("Initializing ...")
 
-# Set grain and edge property configuration
-# Read property configuration files
-grain_prop_cfg <- read.csv(cl_args$grainpropertyconfig, header=TRUE, , comment.char='#')
-edge_prop_cfg <- read.csv(cl_args$edgepropertyconfig, header=TRUE, , comment.char='#')
-
 # Property query functions
 get_value <- function(prop_cfg, type_type, property_property)
 {
@@ -161,6 +156,27 @@ apply_edge_weight_mapping <- function(data,type,out_file=NA)
     return(ret_val)
 }
 
+# Read data
+prof_data <- read.csv(cl_args$data, header=TRUE)
+
+# Information output
+grain_graph_info_out_file <- paste(gsub(". $", "", cl_args$out), ".info", sep="")
+sink(grain_graph_info_out_file)
+sink()
+
+# Remove background task
+prof_data <- prof_data[!is.na(prof_data$parent),]
+
+if (cl_args$forloop) {
+    # Remove idle task without children
+    prof_data <- prof_data[!(prof_data$tag == "idle_task" & prof_data$num_children == 0),]
+}
+
+# Set grain and edge property configuration
+# Read property configuration files
+grain_prop_cfg <- read.csv(cl_args$grainpropertyconfig, header=TRUE, , comment.char='#')
+edge_prop_cfg <- read.csv(cl_args$edgepropertyconfig, header=TRUE, , comment.char='#')
+
 # Set grain sizes
 fork_dia <- as.numeric(get_value(grain_prop_cfg, "fork", "diameter")[1])
 join_dia <- as.numeric(get_value(grain_prop_cfg, "join", "diameter")[1])
@@ -220,21 +236,6 @@ if (!is.na(common_edge_weight[2])) {
     }
 }
 
-# Read data
-prof_data <- read.csv(cl_args$data, header=TRUE)
-
-# Information output
-grain_graph_info_out_file <- paste(gsub(". $", "", cl_args$out), ".info", sep="")
-sink(grain_graph_info_out_file)
-sink()
-
-# Remove background task
-prof_data <- prof_data[!is.na(prof_data$parent),]
-
-if (cl_args$forloop) {
-    # Remove idle task without children
-    prof_data <- prof_data[!(prof_data$tag == "idle_task" & prof_data$num_children == 0),]
-}
 
 if (cl_args$verbose) my_print("Creating grain graph ...")
 
