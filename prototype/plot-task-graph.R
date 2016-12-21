@@ -206,13 +206,13 @@ if (!is.na(task_color[2])) {
 }
 
 # Set edge colors
-create_edge_color <- get_value(edge_prop_cfg, "create", property == "color")[1]
-sync_edge_color <- get_value(edge_prop_cfg, "sync", property == "color")[1]
-scope_edge_color <- get_value(edge_prop_cfg, "scope", property == "color")[1]
-cont_edge_color <- get_value(edge_prop_cfg, "continuation", property == "color")[1]
+create_edge_color <- get_value(edge_prop_cfg, "create", "color")[1]
+sync_edge_color <- get_value(edge_prop_cfg, "sync", "color")[1]
+scope_edge_color <- get_value(edge_prop_cfg, "scope", "color")[1]
+cont_edge_color <- get_value(edge_prop_cfg, "continuation", "color")[1]
 
 # Set edge weights
-common_edge_weight <- get_value(edge_prop_cfg, "common", property == "weight")
+common_edge_weight <- get_value(edge_prop_cfg, "common", "weight")
 if (!is.na(common_edge_weight[2])) {
     if (common_edge_weight[1] %in% colnames(prof_data)) {
         my_print(paste("Error: Mapped variable", common_edge_weight[1], "not found in profiling data!"))
