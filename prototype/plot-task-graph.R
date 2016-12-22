@@ -79,8 +79,9 @@ apply_task_size_mapping <- function(data,type,out_file=NA)
             my_print(paste("Wrote file:", out_file))
         }
     } else if (type == "linear") {
+        linear_size_map_base_multiplier <- 30
         data_unique_norm <- 1 + ((data_unique - min(data_unique)) / (max(data_unique) - min(data_unique)))
-        temp <- data_norm * 30
+        temp <- data_norm * linear_size_map_base_multiplier
         ret_val <-  temp[match(data, data_unique)]
         if(!is.na(out_file)) {
             write.csv(data.frame(value=data_unique, size=temp), out_file, row.names=F)
