@@ -573,7 +573,7 @@ if (cl_args$timing) toc("Calculating critical path")
 # Compute basic information about grain graph
 #
 sink(grain_graph_info_out_file, append=T)
-my_print("# Grain graph structure")
+my_print("# Structure")
 my_print(paste("Number of nodes =", length(V(grain_graph))))
 my_print(paste("Number of edges =", length(E(grain_graph))))
 my_print(paste("Number of tasks =", length(prof_data$task)))
