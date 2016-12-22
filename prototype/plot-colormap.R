@@ -9,7 +9,7 @@ library(optparse, quietly=TRUE)
 
 # Read arguments
 option_list <- list(
-make_option(c("-d","--data"), help = "Color map (*.*to_color)", metavar="FILE"),
+make_option(c("-d","--data"), help = "Color map (*.colormap)", metavar="FILE"),
 make_option(c("--verbose"), action="store_true", default=TRUE, help="Print output [default]."),
 make_option(c("--quiet"), action="store_false", dest="verbose", help="Print little output."))
 
@@ -31,8 +31,8 @@ outf <- paste(gsub("\\.", "-", parsed$data), ".pdf", sep="")
 if(parsed$verbose) print("Plotting colormap")
 
 pdf(outf)
-plot(0,0)
-legend("right", legend=as.character(cm_data$value), fill=as.character(cm_data$color))
+plot(1, type="n", axes=FALSE, xlab="", ylab="")
+legend(1, 1, legend=as.character(cm_data$value), fill=as.character(cm_data$color), xjust=0.5, yjust=0.5)
 title(parsed$data)
 
 # Write out
