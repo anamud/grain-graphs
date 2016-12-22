@@ -1,7 +1,11 @@
+#
+# Setup
+#
+
 # Clean slate
 rm(list=ls())
 
-# Include
+# Include support functions
 mir_root <- Sys.getenv("GRAIN_GRAPHS_ROOT")
 source(paste(mir_root,"/prototype/common.R",sep=""))
 
@@ -37,7 +41,11 @@ if (Rstudio_mode) {
     }
 }
 
+#
+# Initialize varibles
+#
 if (cl_args$verbose) my_print("Initializing ...")
+if (cl_args$timing) tic(type="elapsed")
 
 # Property query functions
 get_value <- function(prop_cfg, type_type, property_property)
@@ -156,13 +164,13 @@ apply_edge_weight_mapping <- function(data,type,out_file=NA)
     return(ret_val)
 }
 
-# Read data
-prof_data <- read.csv(cl_args$data, header=TRUE)
-
-# Information output
+# Prepare information output file
 grain_graph_info_out_file <- paste(gsub(". $", "", cl_args$out), ".info", sep="")
 sink(grain_graph_info_out_file)
 sink()
+
+# Read profiling data
+prof_data <- read.csv(cl_args$data, header=TRUE)
 
 # Remove background task
 prof_data <- prof_data[!is.na(prof_data$parent),]
@@ -172,7 +180,6 @@ if (cl_args$forloop) {
     prof_data <- prof_data[!(prof_data$tag == "idle_task" & prof_data$num_children == 0),]
 }
 
-# Set grain and edge property configuration
 # Read property configuration files
 grain_prop_cfg <- read.csv(cl_args$grainpropertyconfig, header=TRUE, , comment.char='#')
 edge_prop_cfg <- read.csv(cl_args$edgepropertyconfig, header=TRUE, , comment.char='#')
@@ -236,9 +243,12 @@ if (!is.na(common_edge_weight[2])) {
     }
 }
 
-if (cl_args$verbose) my_print("Creating grain graph ...")
+if (cl_args$timing) toc("Initializing")
 
-# Create node lists
+#
+# Create base graph structure
+#
+if (cl_args$verbose) my_print("Creating grain graph with unconnected nodes ...")
 if (cl_args$timing) tic(type="elapsed")
 
 # Create join nodes list
@@ -254,7 +264,7 @@ fork_nodes_unique <- unique(unlist(fork_nodes, use.names=FALSE))
 
 if (cl_args$timing) toc("Node list creation")
 
-# Create grain graph
+# Place nodes in graph
 if (cl_args$timing) tic(type="elapsed")
 
 grain_graph <- graph.empty(directed=TRUE) + vertices('E',
@@ -263,16 +273,20 @@ grain_graph <- graph.empty(directed=TRUE) + vertices('E',
                                                      parent_nodes_unique,
                                                      prof_data$task)))
 
-if (cl_args$timing) toc("grain graph creation")
+if (cl_args$timing) toc("Adding nodes to grain graph")
+
+#
+# Connect nodes
+#
+if (cl_args$verbose) my_print("Connecting nodes ...")
 
 # Connect parent fork to task
-if (cl_args$verbose) my_print("Connecting nodes ...")
 if (cl_args$timing) tic(type="elapsed")
 
 grain_graph[from=fork_nodes, to=prof_data$task, attr='type'] <- 'create'
 grain_graph[from=fork_nodes, to=prof_data$task, attr='color'] <- create_edge_color
 
-if (cl_args$timing) toc("Connect parent fork to task")
+if (cl_args$timing) toc("Connecting parent fork to task")
 
 # Connect parent task to first fork
 if (cl_args$timing) tic(type="elapsed")
@@ -291,7 +305,7 @@ if (!is.na(common_edge_weight[2])) {
     grain_graph[to=first_forks, from=parent_first_forks, attr='weight'] <- -common_edge_weight[1]
 }
 
-if (cl_args$timing) toc("Connect parent to first fork")
+if (cl_args$timing) toc("Connecting parent to first fork")
 
 # Connect leaf task to join
 if (cl_args$timing) tic(type="elapsed")
@@ -309,7 +323,7 @@ if (!is.na(common_edge_weight[2])) {
     grain_graph[from=leaf_tasks, to=leaf_join_nodes, attr='weight'] <- -common_edge_weight[1]
 }
 
-if (cl_args$timing) toc("Connect leaf task to join")
+if (cl_args$timing) toc("Connecting leaf task to join")
 
 # Connect join to next fork
 if (cl_args$timing) tic(type="elapsed")
@@ -350,9 +364,11 @@ grain_graph[from=join_nodes_unique, to=next_forks, attr='type'] <- 'continue'
 grain_graph[from=join_nodes_unique, to=next_forks, attr='color'] <- cont_edge_color
 
 #Rprof(NULL)
-if (cl_args$timing) toc("Connect join to next fork")
+if (cl_args$timing) toc("Connecting join to next fork")
 
+#
 # Set attributes
+#
 if (cl_args$verbose) my_print("Setting attributes ...")
 if (cl_args$timing) tic(type="elapsed")
 
@@ -431,9 +447,11 @@ grain_graph <- set.vertex.attribute(grain_graph, name='diameter', index=join_nod
 # Set weight to zero for edges not assigned weight before (essential for critical path calculation)
 grain_graph <- set.edge.attribute(grain_graph, name="weight", index=which(is.na(E(grain_graph)$weight)), value=0)
 
-if (cl_args$timing) toc("Attribute setting")
+if (cl_args$timing) toc("Setting attributes")
 
+#
 # Check if grain graph has bad structure
+#
 if (cl_args$verbose) my_print("Checking for bad structure ...")
 if (cl_args$timing) tic(type="elapsed")
 
@@ -454,7 +472,9 @@ if (bad_structure == 1) {
 
 if (cl_args$timing) toc("Checking for bad structure")
 
+#
 # Calculate critical path
+#
 if (cl_args$verbose) my_print("Calculating critical path ...")
 if (cl_args$timing) tic(type="elapsed")
 # Simplify - DO NOT USE. Fucks up the critical path analysis.
@@ -525,10 +545,11 @@ if (!cl_args$enumcriticalpath) {
 }
 #Rprof(NULL)
 
-if (cl_args$timing) toc("Critical path calculation")
+if (cl_args$timing) toc("Calculating critical path")
 
-
-# Write basic grain graph info
+#
+# Compute basic information about grain graph
+#
 sink(grain_graph_info_out_file, append=T)
 my_print("# Grain graph structure")
 my_print(paste("Number of nodes =", length(V(grain_graph))))
@@ -555,7 +576,13 @@ if (cl_args$enumcriticalpath) {
 }
 sink()
 
+# Write information to file
+if (cl_args$verbose) my_print("Writing grain graph information ...")
+my_print(paste("Wrote file:", grain_graph_info_out_file))
+
+#
 # Write grain graph to file
+#
 if (cl_args$verbose) my_print("Writing grain graph to various file formats ...")
 
 ## Layout in Sugiyama style and write to PDF
@@ -623,7 +650,9 @@ write.table(get.data.frame(grain_graph, what="vertices"), sep=",", file=temp_out
 my_print(paste("Wrote file:", temp_out_file))
 if (cl_args$timing) toc("Write node attributes")
 
-my_print(paste("Wrote file:", grain_graph_info_out_file))
+#
+# Cleanup
+#
 
 # Warn
 wa <- warnings()
