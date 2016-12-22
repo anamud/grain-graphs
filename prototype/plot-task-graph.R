@@ -553,6 +553,8 @@ if (!cl_args$enumcriticalpath) {
     grain_graph <- set.vertex.attribute(grain_graph, name="depth", index=V(grain_graph), value=graph_vertices$depth)
     critical_edges <- E(grain_graph)[V(grain_graph)[on_crit_path==1] %--% V(grain_graph)[on_crit_path==1]]
     grain_graph <- set.edge.attribute(grain_graph, name="on_crit_path", index=critical_edges, value=1)
+    grain_graph <- set.edge.attribute(grain_graph, name="color", index=critical_edges, value="#FF0000")
+    grain_graph <- set.vertex.attribute(grain_graph, name="border-color", index=critical_nodes, value="#FF0000")
     if (cl_args$verbose) {
         ctr <- ctr + 1
         setTxtProgressBar(progress_bar, ctr)
