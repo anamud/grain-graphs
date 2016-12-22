@@ -403,7 +403,7 @@ if (!is.na(task_width[2])) {
 } else {
     grain_graph <- set.vertex.attribute(grain_graph, name='width', index=task_index, value=task_width[1])
 }
-if (!is.na(task_width[2])) {
+if (!is.na(task_height[2])) {
     temp <- apply_task_size_mapping(as.numeric(prof_data[,task_height[1]]), task_height[2])
     grain_graph <- set.vertex.attribute(grain_graph, name='height', index=task_index, value=temp)
 } else {
