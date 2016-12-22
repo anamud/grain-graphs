@@ -87,8 +87,23 @@ apply_task_size_mapping <- function(data,type,out_file=NA)
             my_print(paste("Wrote file:", out_file))
         }
     } else if (type == "linear-step") {
-        my_print(paste("Error: Unsupported task size mapping type", type))
-        quit("no", 1)
+        linear_size_map_base_multiplier <- 30
+        linear_size_map_num_steps <- 10
+        if ((length(data_unique) == 1) || (length(data_unique) == 2 & identical(c(0,NA), as.numeric(data_unique[order(data_unique)])))) {
+            ret_val <- linear_size_map_base_multiplier
+            if(!is.na(out_file)) {
+                write.csv(data.frame(value=data_unique, size=ret_val), out_file, row.names=F)
+                my_print(paste("Wrote file:", out_file))
+            }
+        } else {
+            temp <- cut(data, linear_size_map_num_steps)
+            ret_val <- linear_size_map_base_multiplier * as.numeric(temp)
+            if(!is.na(out_file)) {
+                data_binned_unique <- unique(temp)
+                write.csv(data.frame(value=data_binned_unique, size=linear_size_map_base_multiplier * as.numeric(data_binned_unique), out_file, row.names=F))
+                my_print(paste("Wrote file:", out_file))
+            }
+        }
     } else {
         my_print(paste("Error: Unsupported task size mapping type", type))
         quit("no", 1)
