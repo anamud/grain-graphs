@@ -201,8 +201,10 @@ grain_prop_cfg <- read.csv(cl_args$grainpropertyconfig, header=TRUE, , comment.c
 edge_prop_cfg <- read.csv(cl_args$edgepropertyconfig, header=TRUE, , comment.char='#')
 
 # Set grain sizes
-fork_dia <- as.numeric(get_value(grain_prop_cfg, "fork", "diameter")[1])
-join_dia <- as.numeric(get_value(grain_prop_cfg, "join", "diameter")[1])
+fork_width <- as.numeric(get_value(grain_prop_cfg, "fork", "width")[1])
+fork_height <- as.numeric(get_value(grain_prop_cfg, "fork", "width")[1])
+join_width <- as.numeric(get_value(grain_prop_cfg, "join", "width")[1])
+join_height <- as.numeric(get_value(grain_prop_cfg, "join", "height")[1])
 start_width <- as.numeric(get_value(grain_prop_cfg, "start", "width")[1])
 start_height <- as.numeric(get_value(grain_prop_cfg, "start", "height")[1])
 end_width <- as.numeric(get_value(grain_prop_cfg, "end", "width")[1])
@@ -450,14 +452,16 @@ fork_nodes_index <- startsWith(V(grain_graph)$name, 'f')
 grain_graph <- set.vertex.attribute(grain_graph, name='color', index=fork_nodes_index, value=fork_color)
 grain_graph <- set.vertex.attribute(grain_graph, name='label', index=fork_nodes_index, value='^')
 grain_graph <- set.vertex.attribute(grain_graph, name='shape', index=fork_nodes_index, value=fork_shape)
-grain_graph <- set.vertex.attribute(grain_graph, name='diameter', index=fork_nodes_index, value=fork_dia)
+grain_graph <- set.vertex.attribute(grain_graph, name='width', index=fork_nodes_index, value=fork_width)
+grain_graph <- set.vertex.attribute(grain_graph, name='height', index=fork_nodes_index, value=fork_height)
 
 # Set join grain attributes
 join_nodes_index <- startsWith(V(grain_graph)$name, 'j')
 grain_graph <- set.vertex.attribute(grain_graph, name='color', index=join_nodes_index, value=join_color)
 grain_graph <- set.vertex.attribute(grain_graph, name='label', index=join_nodes_index, value='*')
 grain_graph <- set.vertex.attribute(grain_graph, name='shape', index=join_nodes_index, value=join_shape)
-grain_graph <- set.vertex.attribute(grain_graph, name='diameter', index=join_nodes_index, value=join_dia)
+grain_graph <- set.vertex.attribute(grain_graph, name='width', index=join_nodes_index, value=join_width)
+grain_graph <- set.vertex.attribute(grain_graph, name='height', index=join_nodes_index, value=join_height)
 
 # Set edge attributes
 # Set weight to zero for edges not assigned weight before (essential for critical path calculation)
