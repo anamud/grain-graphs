@@ -186,7 +186,7 @@ sink(grain_graph_info_out_file)
 sink()
 
 # Read profiling data
-prof_data <- read.csv(cl_args$data, header=TRUE)
+prof_data <- read.csv(cl_args$data, header=TRUE, na.strings="NA")
 
 # Remove background task
 prof_data <- prof_data[!is.na(prof_data$parent),]
@@ -197,8 +197,8 @@ if (cl_args$forloop) {
 }
 
 # Read property configuration files
-grain_prop_cfg <- read.csv(cl_args$grainpropertyconfig, header=TRUE, , comment.char='#')
-edge_prop_cfg <- read.csv(cl_args$edgepropertyconfig, header=TRUE, , comment.char='#')
+grain_prop_cfg <- read.csv(cl_args$grainpropertyconfig, header=TRUE, comment.char='#', na.strings="NA")
+edge_prop_cfg <- read.csv(cl_args$edgepropertyconfig, header=TRUE, comment.char='#', na.strings="NA")
 
 # Set grain sizes
 fork_width <- as.numeric(get_value(grain_prop_cfg, "fork", "width")[1])
