@@ -28,6 +28,7 @@ if (Rstudio_mode) {
                         make_option(c("-o","--out"), default="grain-graph", help = "Output file suffix [default \"%default\"].", metavar="STRING"),
                         make_option(c("--enumcriticalpath"), action="store_true", default=FALSE, help="Enumerate nodes critical path."),
                         make_option(c("--forloop"), action="store_true", default=FALSE, help="Task profiling data obtained from a for-loop program."),
+                        make_option(c("--full"), action="store_true", default=FALSE, help="Plot full graph (with fragments)"),
                         make_option(c("--layout"), action="store_true", default=FALSE, help="Layout using Sugiyama style and plot to PDF."),
                         make_option(c("--verbose"), action="store_true", default=TRUE, help="Print output [default]."),
                         make_option(c("--quiet"), action="store_false", dest="verbose", help="Print little output."),
