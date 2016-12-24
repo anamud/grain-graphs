@@ -40,6 +40,11 @@ if (Rstudio_mode) {
         my_print("Error: Invalid arguments. Check help (-h)")
         quit("no", 1)
     }
+
+    if (cl_args$full && cl_args$forloop) {
+        my_print("Error: Full graph for for-loop programs is not supported yet!")
+        quit("no", 1)
+    }
 }
 
 #
