@@ -1,21 +1,13 @@
+#
+# Setup
+#
+
 # Clean slate
 rm(list=ls())
 
-# Treat warnings as errors
-#options(warn=2)
-
-# Strings as factors
-options(stringsAsFactors = F)
-
-# Include
-mir_root <- Sys.getenv("MIR_ROOT")
-source(paste(mir_root,"/scripts/profiling/task/common.R",sep=""))
-
-# Library
-suppressMessages(library(data.table, quietly=TRUE, warn.conflicts=FALSE))
-suppressMessages(library(dplyr))
-suppressMessages(library(igraph, quietly=TRUE))
-#library(bit64)
+# Include support functions
+mir_root <- Sys.getenv("GRAIN_GRAPHS_ROOT")
+source(paste(mir_root,"/prototype/common.R",sep=""))
 
 # Parse arguments
 # TODO: Understand how to capture if not running inside RStudio.
