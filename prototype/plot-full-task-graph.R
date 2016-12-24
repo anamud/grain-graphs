@@ -10,49 +10,37 @@ mir_root <- Sys.getenv("GRAIN_GRAPHS_ROOT")
 source(paste(mir_root,"/prototype/common.R",sep=""))
 
 # Parse arguments
-# TODO: Understand how to capture if not running inside RStudio.
-running_outside_rstudio <- 1
-if (running_outside_rstudio) {
-    library(optparse, quietly=TRUE)
-    option_list <- list(
-                        make_option(c("-d","--data"), help = "Task performance data file.", metavar="FILE"),
-                        make_option(c("-p","--palette"), default="color", help = "Color palette for graph elements [default \"%default\"]."),
-                        make_option(c("-o","--out"), default="full-task-graph", help = "Output file prefix [default \"%default\"].", metavar="STRING"),
+Rstudio_mode <- F
+if (Rstudio_mode) {
+    cl_args <- list(data="task-stats.processed",
+                   grainpropertyconfig="grain-properties.cfg",
+                   edgepropertyconfig="edge-properties.cfg",
+                   out="grain-graph",
+                   enumcriticalpath=F,
+                   overlap="any",
+                   forloop=F,
+                   layout=F,
+                   verbose=T,
+                   timing=F)
+} else {
+    option_list <- list(make_option(c("-d","--data"), help = "Task profiling data.", metavar="FILE"),
+                        make_option(c("--grainpropertyconfig"), default="grain-properties.cfg", help = "Grain property configuration file [default \"%default\"].", metavar="FILE"),
+                        make_option(c("--edgepropertyconfig"), default="edge-properties.cfg", help = "Edge property configuration file [default \"%default\"].", metavar="FILE"),
+                        make_option(c("-o","--out"), default="grain-graph", help = "Output file suffix [default \"%default\"].", metavar="STRING"),
+                        make_option(c("--enumcriticalpath"), action="store_true", default=FALSE, help="Enumerate nodes critical path."),
+                        make_option(c("--overlap"), default="any", help = "Overlap type for instantaneous parallelism calculation. Choices: any, within. [default \"%default\"].", metavar="STRING"),
+                        make_option(c("--forloop"), action="store_true", default=FALSE, help="Task profiling data obtained from a for-loop program."),
+                        make_option(c("--layout"), action="store_true", default=FALSE, help="Layout using Sugiyama style and plot to PDF."),
                         make_option(c("--verbose"), action="store_true", default=TRUE, help="Print output [default]."),
                         make_option(c("--quiet"), action="store_false", dest="verbose", help="Print little output."),
-                        make_option(c("--timing"), action="store_true", default=FALSE, help="Print processing time."),
-                        make_option(c("--overlap"), default="any", help = "Overlap type for instantaneous parallelism calculation. Choose one among: any, full. [default \"%default\"].", metavar="STRING"))
-    parsed <- parse_args(OptionParser(option_list = option_list), args = commandArgs(TRUE))
-    if (!exists("data", where=parsed))
-    {
-        my_print("Error: Data argument missing. Check help (-h)")
+                        make_option(c("--timing"), action="store_true", default=FALSE, help="Print processing time."))
+
+    cl_args <- parse_args(OptionParser(option_list = option_list), args = commandArgs(TRUE))
+
+    if (!exists("data", where=cl_args)) {
+        my_print("Error: Invalid arguments. Check help (-h)")
         quit("no", 1)
     }
-    if (!(parsed$overlap == "any" | parsed$overlap == "full"))
-    {
-        my_print("Error: Invalid overlap argument. Check help (-h)")
-        quit("no", 1)
-    }
-    if (parsed$overlap == "full")
-    {
-        parsed$overlap <- "within"
-    }
-
-    # Set argments into placeholders
-    # Placeholders help while testing in RStudio where command line arguments are difficult to pass.
-
-    arg_data <- parsed$data
-    arg_palette <- parsed$pal
-    arg_outfileprefix <- parsed$out
-    arg_verbose <- parsed$verbose
-    arg_timing <- parsed$timing
-} else {
-    arg_data <- "mir-task-stats"
-    arg_palette <- "color"
-    arg_overlap <- "any"
-    arg_outfileprefix <- "full-task-graph"
-    arg_verbose <- 1
-    arg_timing <- 1
 }
 
 # Read data
