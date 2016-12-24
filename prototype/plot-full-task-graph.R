@@ -60,14 +60,14 @@ if (arg_timing) tic(type="elapsed")
 join_freq <- tg_data %>% arrange(parent, joins_at) %>% group_by(parent, joins_at) %>% summarise(count = n())
 if (arg_timing) toc("Compute join frequency")
 
-# Funciton returns edges of fragment chain for input task
+# Funciton returns fragment chain for input task
 fragmentize <- function (task, num_children, parent, child_number, joins_at)
 {
     num_fragments <- 1
     # Connect to parent fork
     new_fragment <- paste(task, num_fragments, sep='.')
     parent_fork <- paste('f', parent, child_number, sep='.')
-    edg <- c(parent_fork, new_fragment)
+    fragment_chain <- c(parent_fork, new_fragment)
     last_fragment <- new_fragment
     # Connect fragments
     if (num_children > 0)
@@ -84,7 +84,7 @@ fragmentize <- function (task, num_children, parent, child_number, joins_at)
                 num_fragments <- num_fragments + 1
                 new_fragment <- paste(task, num_fragments, sep='.')
                 fork <- paste('f', task, num_forks, sep=".")
-                edg <- c(edg, last_fragment, fork, fork, new_fragment)
+                fragment_chain <- c(fragment_chain, last_fragment, fork, fork, new_fragment)
                 num_forks <- num_forks + 1
                 last_fragment <- new_fragment
                 if (i == joins[joins_ind])
@@ -92,7 +92,7 @@ fragmentize <- function (task, num_children, parent, child_number, joins_at)
                     num_fragments <- num_fragments + 1
                     new_fragment <- paste(task, num_fragments, sep='.')
                     join <- paste('j', task, num_joins, sep=".")
-                    edg <- c(edg, last_fragment, join, join, new_fragment)
+                    fragment_chain <- c(fragment_chain, last_fragment, join, join, new_fragment)
                     num_joins <- num_joins + 1
                     last_fragment <- new_fragment
                 }
@@ -104,8 +104,8 @@ fragmentize <- function (task, num_children, parent, child_number, joins_at)
     }
     # Connect to parent join
     parent_join <- paste('j', parent, joins_at, sep='.')
-    edg <- c(edg, last_fragment, parent_join)
-    return(edg)
+    fragment_chain <- c(fragment_chain, last_fragment, parent_join)
+    return(fragment_chain)
 }
 
 # Apply fragmentize on all tasks
