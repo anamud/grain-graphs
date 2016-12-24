@@ -41,7 +41,7 @@ if (Rstudio_mode) {
         quit("no", 1)
     }
 
-    if (cl_args$full && cl_args$forloop) {
+    if (cl_args$full & cl_args$forloop) {
         my_print("Error: Full graph for for-loop programs is not supported yet!")
         quit("no", 1)
     }
@@ -68,73 +68,6 @@ if (cl_args$forloop) {
     # Remove idle task without children
     prof_data <- prof_data[!(prof_data$tag == "idle_task" & prof_data$num_children == 0),]
 }
-
-# Read property configuration files
-grain_prop_cfg <- read.csv(cl_args$grainpropertyconfig, header=TRUE, comment.char='#', na.strings="NA")
-edge_prop_cfg <- read.csv(cl_args$edgepropertyconfig, header=TRUE, comment.char='#', na.strings="NA")
-
-# Set grain sizes
-fork_width <- as.numeric(get_value(grain_prop_cfg, "fork", "width")[1])
-fork_height <- as.numeric(get_value(grain_prop_cfg, "fork", "width")[1])
-join_width <- as.numeric(get_value(grain_prop_cfg, "join", "width")[1])
-join_height <- as.numeric(get_value(grain_prop_cfg, "join", "height")[1])
-start_width <- as.numeric(get_value(grain_prop_cfg, "start", "width")[1])
-start_height <- as.numeric(get_value(grain_prop_cfg, "start", "height")[1])
-end_width <- as.numeric(get_value(grain_prop_cfg, "end", "width")[1])
-end_height <- as.numeric(get_value(grain_prop_cfg, "end", "height")[1])
-
-task_width <- get_value(grain_prop_cfg, "task", "width")
-if (!is.na(task_width[2])) {
-    if (!(task_width[1] %in% colnames(prof_data))) {
-        my_print(paste("Error: Mapped variable", task_width[1], "not found in profiling data!"))
-        quit("no", 1)
-    }
-}
-task_height <- get_value(grain_prop_cfg, "task", "height")
-if (!is.na(task_height[2])) {
-    if (!(task_height[1] %in% colnames(prof_data))) {
-        my_print(paste("Error: Mapped variable", task_height[1], "not found in profiling data!"))
-        quit("no", 1)
-    }
-}
-
-# Set grain shapes
-fork_shape <- get_value(grain_prop_cfg, "fork", "shape")[1]
-join_shape <- get_value(grain_prop_cfg, "join", "shape")[1]
-start_shape <- get_value(grain_prop_cfg, "start", "shape")[1]
-end_shape <- get_value(grain_prop_cfg, "end", "shape")[1]
-task_shape <- get_value(grain_prop_cfg, "end", "shape")[1]
-
-# Set grain colors
-fork_color <- get_value(grain_prop_cfg, "fork", "color")[1]
-join_color <- get_value(grain_prop_cfg, "join", "color")[1]
-start_color <- get_value(grain_prop_cfg, "start", "color")[1]
-end_color <- get_value(grain_prop_cfg, "end", "color")[1]
-
-task_color <- get_value(grain_prop_cfg, "task", "color")
-if (!is.na(task_color[2])) {
-    if (!(task_color[1] %in% colnames(prof_data))) {
-        my_print(paste("Error: Mapped variable", task_color[1], "not found in profiling data!"))
-        quit("no", 1)
-    }
-}
-
-# Set edge colors
-create_edge_color <- get_value(edge_prop_cfg, "create", "color")[1]
-sync_edge_color <- get_value(edge_prop_cfg, "sync", "color")[1]
-scope_edge_color <- get_value(edge_prop_cfg, "scope", "color")[1]
-cont_edge_color <- get_value(edge_prop_cfg, "continuation", "color")[1]
-
-# Set edge weights
-common_edge_weight <- get_value(edge_prop_cfg, "common", "weight")
-if (!is.na(common_edge_weight[2])) {
-    if (!(common_edge_weight[1] %in% colnames(prof_data))) {
-        my_print(paste("Error: Mapped variable", common_edge_weight[1], "not found in profiling data!"))
-        quit("no", 1)
-    }
-}
-
-if (cl_args$timing) toc("Initializing")
 
 # Property query functions
 get_value <- function(prop_cfg, type_type, property_property)
@@ -269,6 +202,73 @@ apply_edge_weight_mapping <- function(data,type,out_file=NA)
     return(ret_val)
 }
 
+
+# Read property configuration files
+grain_prop_cfg <- read.csv(cl_args$grainpropertyconfig, header=TRUE, comment.char='#', na.strings="NA")
+edge_prop_cfg <- read.csv(cl_args$edgepropertyconfig, header=TRUE, comment.char='#', na.strings="NA")
+
+# Set grain sizes
+fork_width <- as.numeric(get_value(grain_prop_cfg, "fork", "width")[1])
+fork_height <- as.numeric(get_value(grain_prop_cfg, "fork", "width")[1])
+join_width <- as.numeric(get_value(grain_prop_cfg, "join", "width")[1])
+join_height <- as.numeric(get_value(grain_prop_cfg, "join", "height")[1])
+start_width <- as.numeric(get_value(grain_prop_cfg, "start", "width")[1])
+start_height <- as.numeric(get_value(grain_prop_cfg, "start", "height")[1])
+end_width <- as.numeric(get_value(grain_prop_cfg, "end", "width")[1])
+end_height <- as.numeric(get_value(grain_prop_cfg, "end", "height")[1])
+
+task_width <- get_value(grain_prop_cfg, "task", "width")
+if (!is.na(task_width[2])) {
+    if (!(task_width[1] %in% colnames(prof_data))) {
+        my_print(paste("Error: Mapped variable", task_width[1], "not found in profiling data!"))
+        quit("no", 1)
+    }
+}
+task_height <- get_value(grain_prop_cfg, "task", "height")
+if (!is.na(task_height[2])) {
+    if (!(task_height[1] %in% colnames(prof_data))) {
+        my_print(paste("Error: Mapped variable", task_height[1], "not found in profiling data!"))
+        quit("no", 1)
+    }
+}
+
+# Set grain shapes
+fork_shape <- get_value(grain_prop_cfg, "fork", "shape")[1]
+join_shape <- get_value(grain_prop_cfg, "join", "shape")[1]
+start_shape <- get_value(grain_prop_cfg, "start", "shape")[1]
+end_shape <- get_value(grain_prop_cfg, "end", "shape")[1]
+task_shape <- get_value(grain_prop_cfg, "end", "shape")[1]
+
+# Set grain colors
+fork_color <- get_value(grain_prop_cfg, "fork", "color")[1]
+join_color <- get_value(grain_prop_cfg, "join", "color")[1]
+start_color <- get_value(grain_prop_cfg, "start", "color")[1]
+end_color <- get_value(grain_prop_cfg, "end", "color")[1]
+
+task_color <- get_value(grain_prop_cfg, "task", "color")
+if (!is.na(task_color[2])) {
+    if (!(task_color[1] %in% colnames(prof_data))) {
+        my_print(paste("Error: Mapped variable", task_color[1], "not found in profiling data!"))
+        quit("no", 1)
+    }
+}
+
+# Set edge colors
+create_edge_color <- get_value(edge_prop_cfg, "create", "color")[1]
+sync_edge_color <- get_value(edge_prop_cfg, "sync", "color")[1]
+scope_edge_color <- get_value(edge_prop_cfg, "scope", "color")[1]
+cont_edge_color <- get_value(edge_prop_cfg, "continuation", "color")[1]
+
+# Set edge weights
+common_edge_weight <- get_value(edge_prop_cfg, "common", "weight")
+if (!is.na(common_edge_weight[2])) {
+    if (!(common_edge_weight[1] %in% colnames(prof_data))) {
+        my_print(paste("Error: Mapped variable", common_edge_weight[1], "not found in profiling data!"))
+        quit("no", 1)
+    }
+}
+
+if (cl_args$timing) toc("Initializing")
 
 #
 # Create base graph structure
