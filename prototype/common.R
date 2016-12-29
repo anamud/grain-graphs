@@ -6,6 +6,8 @@ library(RColorBrewer, quietly=TRUE) # Colors
 suppressMessages(library(igraph, quietly=TRUE))
 suppressMessages(library(gdata, quietly=TRUE, warn.conflicts=FALSE))
 library(optparse, quietly=TRUE)
+suppressMessages(library(data.table, quietly=TRUE, warn.conflicts=FALSE))
+suppressMessages(library(dplyr))
 
 # Treat warnings as errors
 #options(warn=2)
