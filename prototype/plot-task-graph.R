@@ -629,6 +629,7 @@ if (cl_args$layout) {
 ## Write dot file
 #if (cl_args$timing) tic(type="elapsed")
 #temp_out_file <- paste(gsub(". $", "", cl_args$out), ".dot", sep="")
+#grain_graph <- remove.vertex.attribute(grain_graph,"root_path")
 #res <- write.graph(grain_graph, file=temp_out_file, format="dot")
 #my_print(paste("Wrote file:", temp_out_file))
 #if (cl_args$timing) toc("Write dot")
