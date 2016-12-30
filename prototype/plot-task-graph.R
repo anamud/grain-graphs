@@ -28,7 +28,7 @@ if (Rstudio_mode) {
                         make_option(c("-o","--out"), default="grain-graph", help = "Output file suffix [default \"%default\"].", metavar="STRING"),
                         make_option(c("--enumcriticalpath"), action="store_true", default=FALSE, help="Enumerate nodes on critical path."),
                         make_option(c("--forloop"), action="store_true", default=FALSE, help="Task profiling data obtained from a for-loop program."),
-                        make_option(c("--full"), action="store_true", default=FALSE, help="Plot full graph (with fragments)"),
+                        make_option(c("--unreduced"), action="store_true", default=FALSE, help="Plot unreduced graph (with fragments)"),
                         make_option(c("--layout"), action="store_true", default=FALSE, help="Layout using Sugiyama style and plot to PDF."),
                         make_option(c("--verbose"), action="store_true", default=TRUE, help="Print output [default]."),
                         make_option(c("--quiet"), action="store_false", dest="verbose", help="Print little output."),
@@ -41,8 +41,8 @@ if (Rstudio_mode) {
         quit("no", 1)
     }
 
-    if (cl_args$full & cl_args$forloop) {
-        my_print("Error: Full graph for for-loop programs is not supported yet!")
+    if (cl_args$unreduced & cl_args$forloop) {
+        my_print("Error: Unreduced graph for for-loop programs is not supported yet!")
         quit("no", 1)
     }
 }
@@ -276,7 +276,7 @@ if (cl_args$timing) toc("Initializing")
 if (cl_args$verbose) my_print("Creating base grain graph structure ...")
 if (cl_args$timing) tic(type="elapsed")
 
-if (cl_args$full) {
+if (cl_args$unreduced) {
     # Compute join frequeny
     if (cl_args$timing) tic(type="elapsed")
 
@@ -476,7 +476,7 @@ if (cl_args$timing) tic(type="elapsed")
 # Common attributes
 V(grain_graph)$label <- V(grain_graph)$name
 
-if (cl_args$full) {
+if (cl_args$unreduced) {
     # Set fragment grain attributes
     graph_vertices <- data.table(node=get.data.frame(grain_graph, what="vertices")$name, exec_cycles=0, type="fragment")
     #pesky_factors <- sapply(graph_vertices, is.factor)
@@ -689,7 +689,7 @@ if (cl_args$timing) tic(type="elapsed")
 
 bad_structure <- 0
 
-if (cl_args$full) {
+if (cl_args$unreduced) {
     bad_structure <- 0
 } else {
     if ((is.element(0, degree(grain_graph, fork_nodes_index, mode = c("in")))) ||
@@ -741,7 +741,7 @@ if (!cl_args$enumcriticalpath) {
     {
         # Get distance from node's predecessors
         incident_edges <- incident(grain_graph, node, mode="in")
-        if (cl_args$full) {
+        if (cl_args$unreduced) {
             incident_edge_weights <- V(grain_graph)[get.edges(grain_graph, incident_edges)[,1]]$exec_cycles
         } else {
             incident_edge_weights <- -E(grain_graph)[incident_edges]$weight
@@ -797,7 +797,7 @@ my_print("# Structure")
 my_print(paste("Number of nodes =", length(V(grain_graph))))
 my_print(paste("Number of edges =", length(E(grain_graph))))
 my_print(paste("Number of tasks =", length(prof_data$task)))
-if (cl_args$full) {
+if (cl_args$unreduced) {
     my_print(paste("Number of fragments =", length(which(graph_vertices$type == "fragment"))))
 }
 my_print(paste("Number of forks =", length(unique(as.character(get.vertex.attribute(grain_graph, name="name", index=fork_nodes_index))))))
@@ -817,7 +817,7 @@ if (!is.na(common_edge_weight[2])) {
     my_print(paste("Parallelism (Work/Span) =", work/critical_path))
 }
 if (cl_args$enumcriticalpath) {
-    if (cl_args$full) {
+    if (cl_args$unreduced) {
         my_print(paste("Number of critical fragments =", length(graph_vertices$name[graph_vertices$on_crit_path == 1 & graph_vertices$type == "fragment"])))
     } else {
         my_print(paste("Number of critical tasks =", length(graph_vertices$name[graph_vertices$on_crit_path == 1 & graph_vertices$type == "task"])))
