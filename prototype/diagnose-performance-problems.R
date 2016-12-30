@@ -50,6 +50,10 @@ sink()
 # Read graph
 grain_graph <- read.graph(cl_args$graph, format="graphml")
 task_data <- get.data.frame(grain_graph, what="vertices")
+if (!("task" %in% colnames(task_data))) {
+    my_print("Error: Graph does not have task annotation. Aborting!")
+    quit("no", 1)
+}
 task_data[task_data == "NA"] <- NA
 task_data <- subset(task_data, !is.na(task))
 
