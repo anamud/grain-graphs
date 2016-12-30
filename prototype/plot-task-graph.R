@@ -277,6 +277,79 @@ if (cl_args$verbose) my_print("Creating base grain graph structure ...")
 if (cl_args$timing) tic(type="elapsed")
 
 if (cl_args$full) {
+    # Compute join frequeny
+    if (cl_args$timing) tic(type="elapsed")
+
+    join_freq <- prof_data %>% arrange(parent, joins_at) %>% group_by(parent, joins_at) %>% summarise(count = n())
+
+    if (cl_args$timing) toc("Computing join frequency")
+
+    # Compute fragment chains for tasks
+    if (cl_args$timing) tic(type="elapsed")
+
+    fragmentize <- function (task, num_children, parent, child_number, joins_at)
+    {
+        num_fragments <- 1
+        # Connect to parent fork
+        new_fragment <- paste(task, num_fragments, sep='.')
+        parent_fork <- paste('f', parent, child_number, sep='.')
+        fragment_chain <- c(parent_fork, new_fragment)
+        last_fragment <- new_fragment
+        # Connect fragments
+        if (num_children > 0)
+        {
+            joins <- join_freq[join_freq$parent == task,]$count
+            joins_index <- 1
+            num_forks <- 1
+            num_joins <- 0
+            while(1)
+            {
+                stopifnot(joins[joins_index] > 0)
+                for(i in 1:joins[joins_index])
+                {
+                    num_fragments <- num_fragments + 1
+                    new_fragment <- paste(task, num_fragments, sep='.')
+                    fork <- paste('f', task, num_forks, sep=".")
+                    fragment_chain <- c(fragment_chain, last_fragment, fork, fork, new_fragment)
+                    num_forks <- num_forks + 1
+                    last_fragment <- new_fragment
+                    if (i == joins[joins_index])
+                    {
+                        num_fragments <- num_fragments + 1
+                        new_fragment <- paste(task, num_fragments, sep='.')
+                        join <- paste('j', task, num_joins, sep=".")
+                        fragment_chain <- c(fragment_chain, last_fragment, join, join, new_fragment)
+                        num_joins <- num_joins + 1
+                        last_fragment <- new_fragment
+                    }
+                }
+                joins_index <- joins_index + 1
+                if (joins_index > length(joins))
+                    break
+            }
+        }
+        # Connect to parent join
+        parent_join <- paste('j', parent, joins_at, sep='.')
+        fragment_chain <- c(fragment_chain, last_fragment, parent_join)
+        return(fragment_chain)
+    }
+
+    fragment_chains <- unlist(mapply(fragmentize,
+                              task=prof_data$task,
+                              num_children=prof_data$num_children,
+                              parent=prof_data$parent,
+                              child_number=prof_data$child_number,
+                              joins_at=prof_data$joins_at))
+    fragment_chains <- matrix(fragment_chains, nc=2, byrow=TRUE)
+
+    if (cl_args$timing) toc("Computing fragment chains")
+
+    # Construct graph
+    if (cl_args$timing) tic(type="elapsed")
+
+    grain_graph <- graph.edgelist(fragment_chains, directed = TRUE)
+
+    if (cl_args$timing) toc("Constructing grain graph using fragment chains")
 } else {
     # Create join nodes list
     join_nodes <- mapply(function(x, y, z) {paste('j', x, y, sep='.')}, x=prof_data$parent, y=prof_data$joins_at)
@@ -404,6 +477,126 @@ if (cl_args$timing) tic(type="elapsed")
 V(grain_graph)$label <- V(grain_graph)$name
 
 if (cl_args$full) {
+    # Set fragment grain attributes
+    graph_vertices <- data.table(node=get.data.frame(grain_graph, what="vertices")$name, exec_cycles=0, type="fragment")
+    #pesky_factors <- sapply(graph_vertices, is.factor)
+    #graph_vertices[pesky_factors] <- lapply(graph_vertices[pesky_factors], as.character)
+
+    fragment_index <- with(graph_vertices, grepl("^[0-9]+.[0-9]+$", node))
+    #start_index <- with(graph_vertices, grepl("^f.0.1$", node))
+    #end_index <- with(graph_vertices, grepl("^j.0.0$", node))
+    #fork_index <- with(graph_vertices, grepl("^f.[0-9]+.[0-9]+$", node))
+    #join_index <- with(graph_vertices, grepl("^j.[0-9]+.[0-9]+$", node))
+
+    grain_graph <- set.vertex.attribute(grain_graph, name="type", index=fragment_index, value=graph_vertices[fragment_index,]$type)
+    grain_graph <- set.vertex.attribute(grain_graph, name="shape", index=fragment_index, value=task_shape)
+
+    # Compute fragment execution cycles
+    compute_fragment_duration <- function(task, wait, exec_cycles, choice)
+    {
+        # Each task has breaks at these instants: (execution start, child creation, child wait, execution end)
+        # A fragments executes upto the next break.
+        wait_instants <- as.numeric(unlist(strsplit(substring(wait, 2, nchar(wait)-1), ";", fixed = TRUE)))
+        create_instants <- as.numeric(prof_data$create_instant[prof_data$parent == task])
+        instants <- c(wait_instants, create_instants, 1, 1 + exec_cycles)
+        # Sort to line up breaks.
+        instants <- sort(instants)
+        # Remove placeholder breaks.
+        instants <- instants[instants != 0]
+        # Assert if last break is not execution end
+        stopifnot(instants[length(instants)] == 1 + exec_cycles)
+        durations <- diff(instants)
+        # Assert if there are no durations!
+        stopifnot(length(durations) > 0)
+        # Get fragment identifiers
+        fragments <- paste(as.character(task),paste(".",as.character(seq(1:length(durations))),sep=""),sep="")
+        # This is an ugly hack because mapply and do.call(rbind) are not working together.
+        if (choice == 1)
+            return(fragments)
+        else
+            return(durations)
+    }
+
+    fd <- data.table(fragment=unlist(mapply(compute_fragment_duration,
+                                            task=prof_data$task,
+                                            wait=prof_data$wait_instants,
+                                            exec_cycles=prof_data$exec_cycles,
+                                            choice=1)),
+                     duration=unlist(mapply(compute_fragment_duration,
+                                            task=prof_data$task,
+                                            wait=prof_data$wait_instants,
+                                            exec_cycles=prof_data$exec_cycles,
+                                            choice=2)))
+    graph_vertices[match(fd$fragment, graph_vertices$node)]$exec_cycles <- fd$duration
+    grain_graph <- set.vertex.attribute(grain_graph, name="exec_cycles", index=V(grain_graph), value=graph_vertices$exec_cycles)
+
+    # Set fragment size to constant or based on execution cycles
+    if (!is.na(task_width[2])) {
+        if (task_width[1] != "exec_cycles") {
+            my_print(paste("Error: Cannot map fragment width to", task_width[1], ". Available mapping options are: exec_cyles."))
+            quit("no", 1)
+        } else {
+            temp <- apply_task_size_mapping(as.numeric(graph_vertices$exec_cycles), task_width[2])
+            grain_graph <- set.vertex.attribute(grain_graph, name="height", index=V(grain_graph), value=temp)
+        }
+    } else {
+        grain_graph <- set.vertex.attribute(grain_graph, name="width", index=V(grain_graph), value=task_width[1])
+    }
+    if (!is.na(task_height[2])) {
+        if (task_height[1] != "exec_cycles") {
+            my_print(paste("Error: Cannot map fragment height to", task_height[1], ". Available mapping options are: exec_cyles."))
+            quit("no", 1)
+        } else {
+            temp <- apply_task_size_mapping(as.numeric(graph_vertices$exec_cycles), task_height[2])
+            grain_graph <- set.vertex.attribute(grain_graph, name="height", index=V(grain_graph), value=temp)
+        }
+    } else {
+        grain_graph <- set.vertex.attribute(grain_graph, name="height", index=V(grain_graph), value=task_height[1])
+    }
+
+    # Set fragment color to constant or based on execution cycles
+    if (!is.na(task_color[2])) {
+        if (task_color[1] != "exec_cycles") {
+            my_print(paste("Error: Cannot map fragment color to", task_color[1], ". Available mapping options are: exec_cyles."))
+            quit("no", 1)
+        } else {
+            temp <- apply_task_color_mapping(as.numeric(graph_vertices$exec_cycles), task_color[2], paste("task-", task_color[1], "-", task_color[2], ".colormap", sep=""))
+            grain_graph <- set.vertex.attribute(grain_graph, name="color", index=V(grain_graph), value=temp)
+        }
+    } else {
+        grain_graph <- set.vertex.attribute(grain_graph, name="color", index=V(grain_graph), value=task_color[1])
+    }
+
+    # Set edge weight
+    if (!is.na(common_edge_weight[2])) {
+        if (common_edge_weight[1] != "exec_cycles") {
+            my_print(paste("Error: Cannot map edge weight to", common_edge_weight[1], ". Available mapping options are: exec_cyles."))
+            quit("no", 1)
+        } else {
+            top_sort_graph <- topological.sort(grain_graph)
+            for(node in top_sort_graph[-1])
+            {
+                incident_edges <- incident(grain_graph, node, mode="in")
+                incident_edge_vertices <- get.edges(grain_graph, incident_edges)
+                incident_edge_weights <- V(grain_graph)[incident_edge_vertices[,1]]$exec_cycles
+                grain_graph <- set.edge.attribute(grain_graph, name="weight", index=incident_edges, value=incident_edge_weights)
+            }
+        }
+    } else {
+        top_sort_graph <- topological.sort(grain_graph)
+        for(node in top_sort_graph[-1])
+        {
+            incident_edges <- incident(grain_graph, node, mode="in")
+            grain_graph <- set.edge.attribute(grain_graph, name="weight", index=incident_edges, value=common_edge_weight[1])
+        }
+    }
+
+    # Set edge type and color
+    grain_graph <- set.edge.attribute(grain_graph, name="type", index=E(grain_graph), value="scope")
+    grain_graph <- set.edge.attribute(grain_graph, name="color", index=E(grain_graph), value=scope_edge_color)
+
+    # TODO: Add annotations
+    # TODO: Set size and color based on other attributes
 } else {
     # Set task grain attributes
     task_index <- match(as.character(prof_data$task), V(grain_graph)$name)
@@ -497,6 +690,7 @@ if (cl_args$timing) tic(type="elapsed")
 bad_structure <- 0
 
 if (cl_args$full) {
+    bad_structure <- 0
 } else {
     if ((is.element(0, degree(grain_graph, fork_nodes_index, mode = c("in")))) ||
         (is.element(0, degree(grain_graph, fork_nodes_index, mode = c("out")))) ||
@@ -548,6 +742,7 @@ if (!cl_args$enumcriticalpath) {
         # Get distance from node's predecessors
         incident_edges <- incident(grain_graph, node, mode="in")
         if (cl_args$full) {
+            incident_edge_weights <- V(grain_graph)[get.edges(grain_graph, incident_edges)[,1]]$exec_cycles
         } else {
             incident_edge_weights <- -E(grain_graph)[incident_edges]$weight
         }
@@ -603,6 +798,7 @@ my_print(paste("Number of nodes =", length(V(grain_graph))))
 my_print(paste("Number of edges =", length(E(grain_graph))))
 my_print(paste("Number of tasks =", length(prof_data$task)))
 if (cl_args$full) {
+    my_print(paste("Number of fragments =", length(which(graph_vertices$type == "fragment"))))
 }
 my_print(paste("Number of forks =", length(unique(as.character(get.vertex.attribute(grain_graph, name="name", index=fork_nodes_index))))))
 my_print("# Out-degree distribution of forks")
@@ -622,6 +818,7 @@ if (!is.na(common_edge_weight[2])) {
 }
 if (cl_args$enumcriticalpath) {
     if (cl_args$full) {
+        my_print(paste("Number of critical fragments =", length(graph_vertices$name[graph_vertices$on_crit_path == 1 & graph_vertices$type == "fragment"])))
     } else {
         my_print(paste("Number of critical tasks =", length(graph_vertices$name[graph_vertices$on_crit_path == 1 & graph_vertices$type == "task"])))
     }
