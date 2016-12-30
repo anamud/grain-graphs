@@ -26,7 +26,7 @@ if (Rstudio_mode) {
                         make_option(c("--grainpropertyconfig"), default="grain-properties.cfg", help = "Grain property configuration file [default \"%default\"].", metavar="FILE"),
                         make_option(c("--edgepropertyconfig"), default="edge-properties.cfg", help = "Edge property configuration file [default \"%default\"].", metavar="FILE"),
                         make_option(c("-o","--out"), default="grain-graph", help = "Output file suffix [default \"%default\"].", metavar="STRING"),
-                        make_option(c("--enumcriticalpath"), action="store_true", default=FALSE, help="Enumerate nodes critical path."),
+                        make_option(c("--enumcriticalpath"), action="store_true", default=FALSE, help="Enumerate nodes on critical path."),
                         make_option(c("--forloop"), action="store_true", default=FALSE, help="Task profiling data obtained from a for-loop program."),
                         make_option(c("--full"), action="store_true", default=FALSE, help="Plot full graph (with fragments)"),
                         make_option(c("--layout"), action="store_true", default=FALSE, help="Layout using Sugiyama style and plot to PDF."),
@@ -273,123 +273,126 @@ if (cl_args$timing) toc("Initializing")
 #
 # Create base graph structure
 #
-if (cl_args$verbose) my_print("Creating grain graph with unconnected nodes ...")
+if (cl_args$verbose) my_print("Creating base grain graph structure ...")
 if (cl_args$timing) tic(type="elapsed")
 
-# Create join nodes list
-join_nodes <- mapply(function(x, y, z) {paste('j', x, y, sep='.')}, x=prof_data$parent, y=prof_data$joins_at)
-join_nodes_unique <- unique(unlist(join_nodes, use.names=FALSE))
-
-# Create parent nodes list
-parent_nodes_unique <- unique(prof_data$parent)
-
-# Create fork nodes list
-fork_nodes <- mapply(function(x, y, z) {paste('f', x, y, sep='.')}, x=prof_data$parent, y=prof_data$joins_at)
-fork_nodes_unique <- unique(unlist(fork_nodes, use.names=FALSE))
-
-if (cl_args$timing) toc("Node list creation")
-
-# Place nodes in graph
-if (cl_args$timing) tic(type="elapsed")
-
-grain_graph <- graph.empty(directed=TRUE) + vertices('E',
-                                            unique(c(join_nodes_unique,
-                                                     fork_nodes_unique,
-                                                     parent_nodes_unique,
-                                                     prof_data$task)))
-
-if (cl_args$timing) toc("Adding nodes to grain graph")
-
-#
-# Connect nodes
-#
-if (cl_args$verbose) my_print("Connecting nodes ...")
-
-# Connect parent fork to task
-if (cl_args$timing) tic(type="elapsed")
-
-grain_graph[from=fork_nodes, to=prof_data$task, attr='type'] <- 'create'
-grain_graph[from=fork_nodes, to=prof_data$task, attr='color'] <- create_edge_color
-
-if (cl_args$timing) toc("Connecting parent fork to task")
-
-# Connect parent task to first fork
-if (cl_args$timing) tic(type="elapsed")
-
-first_forks_index <- which(grepl("f.[0-9]+.0$", fork_nodes_unique))
-parent_first_forks <- as.vector(sapply(fork_nodes_unique[first_forks_index], function(x) {gsub('f.(.*)\\.+.*','\\1', x)}))
-first_forks <- fork_nodes_unique[first_forks_index]
-
-grain_graph[to=first_forks, from=parent_first_forks, attr='type'] <- 'scope'
-grain_graph[to=first_forks, from=parent_first_forks, attr='color'] <- scope_edge_color
-
-if (!is.na(common_edge_weight[2])) {
-    temp <- apply_edge_weight_mapping(as.numeric(prof_data[match(parent_first_forks, prof_data$task),common_edge_weight[1]]), common_edge_weight[2])
-    grain_graph[to=first_forks, from=parent_first_forks, attr='weight'] <- -temp
+if (cl_args$full) {
 } else {
-    grain_graph[to=first_forks, from=parent_first_forks, attr='weight'] <- -common_edge_weight[1]
-}
+    # Create join nodes list
+    join_nodes <- mapply(function(x, y, z) {paste('j', x, y, sep='.')}, x=prof_data$parent, y=prof_data$joins_at)
+    join_nodes_unique <- unique(unlist(join_nodes, use.names=FALSE))
 
-if (cl_args$timing) toc("Connecting parent to first fork")
+    # Create parent nodes list
+    parent_nodes_unique <- unique(prof_data$parent)
 
-# Connect leaf task to join
-if (cl_args$timing) tic(type="elapsed")
+    # Create fork nodes list
+    fork_nodes <- mapply(function(x, y, z) {paste('f', x, y, sep='.')}, x=prof_data$parent, y=prof_data$joins_at)
+    fork_nodes_unique <- unique(unlist(fork_nodes, use.names=FALSE))
 
-leaf_tasks <- prof_data$task[prof_data$leaf == T]
-leaf_join_nodes <- join_nodes[match(leaf_tasks, prof_data$task)]
+    if (cl_args$timing) toc("Node list creation")
 
-grain_graph[from=leaf_tasks, to=leaf_join_nodes, attr='type'] <- 'sync'
-grain_graph[from=leaf_tasks, to=leaf_join_nodes, attr='color'] <- sync_edge_color
+    # Place nodes in graph
+    if (cl_args$timing) tic(type="elapsed")
 
-if (!is.na(common_edge_weight[2])) {
-    temp <- apply_edge_weight_mapping(as.numeric(prof_data[match(leaf_tasks, prof_data$task),common_edge_weight[1]]), common_edge_weight[2])
-    grain_graph[from=leaf_tasks, to=leaf_join_nodes, attr='weight'] <- -temp
-} else {
-    grain_graph[from=leaf_tasks, to=leaf_join_nodes, attr='weight'] <- -common_edge_weight[1]
-}
+    grain_graph <- graph.empty(directed=TRUE) + vertices('E',
+                                                unique(c(join_nodes_unique,
+                                                         fork_nodes_unique,
+                                                         parent_nodes_unique,
+                                                         prof_data$task)))
 
-if (cl_args$timing) toc("Connecting leaf task to join")
+    if (cl_args$timing) toc("Adding nodes to grain graph")
 
-# Connect join to next fork
-if (cl_args$timing) tic(type="elapsed")
+    #
+    # Connect nodes
+    #
+    if (cl_args$verbose) my_print("Connecting nodes ...")
 
-#Rprof("profile-jointonext.out")
-find_next_fork <- function(node)
-{
-    #my_print(paste('Processing node',node, sep=" "))
+    # Connect parent fork to task
+    if (cl_args$timing) tic(type="elapsed")
 
-    # Get node info
-    node_split <- unlist(strsplit(node, "\\."))
-    parent <- as.numeric(node_split[2])
-    join_count <- as.numeric(node_split[3])
+    grain_graph[from=fork_nodes, to=prof_data$task, attr="type"] <- "create"
+    grain_graph[from=fork_nodes, to=prof_data$task, attr="color"] <- create_edge_color
 
-    # Find next fork
-    next_fork <- paste('f', as.character(parent), as.character(join_count+1), sep=".")
-    if (is.na(match(next_fork, fork_nodes_unique)) == F) {
-        next_fork <- next_fork # Connect to next fork
+    if (cl_args$timing) toc("Connecting parent fork to task")
+
+    # Connect parent task to first fork
+    if (cl_args$timing) tic(type="elapsed")
+
+    first_forks_index <- which(grepl("f.[0-9]+.0$", fork_nodes_unique))
+    parent_first_forks <- as.vector(sapply(fork_nodes_unique[first_forks_index], function(x) {gsub("f.(.*)\\.+.*","\\1", x)}))
+    first_forks <- fork_nodes_unique[first_forks_index]
+
+    grain_graph[to=first_forks, from=parent_first_forks, attr="type"] <- "scope"
+    grain_graph[to=first_forks, from=parent_first_forks, attr="color"] <- scope_edge_color
+
+    if (!is.na(common_edge_weight[2])) {
+        temp <- apply_edge_weight_mapping(as.numeric(prof_data[match(parent_first_forks, prof_data$task),common_edge_weight[1]]), common_edge_weight[2])
+        grain_graph[to=first_forks, from=parent_first_forks, attr="weight"] <- -temp
     } else {
-
-        # Next fork is part of grandfather
-        parent_index <- match(parent, prof_data$task)
-        gfather <- prof_data[parent_index,]$parent
-        gfather_join <- paste('j', as.character(gfather), as.character(prof_data[parent_index,]$joins_at), sep=".")
-
-        if (is.na(match(gfather_join, join_nodes_unique)) == F) {
-            next_fork <- gfather_join # Connect to grandfather's join
-        } else {
-            next_fork <- 'E' # Connect to end node
-        }
+        grain_graph[to=first_forks, from=parent_first_forks, attr="weight"] <- -common_edge_weight[1]
     }
-    next_fork
+
+    if (cl_args$timing) toc("Connecting parent to first fork")
+
+    # Connect leaf task to join
+    if (cl_args$timing) tic(type="elapsed")
+
+    leaf_tasks <- prof_data$task[prof_data$leaf == T]
+    leaf_join_nodes <- join_nodes[match(leaf_tasks, prof_data$task)]
+
+    grain_graph[from=leaf_tasks, to=leaf_join_nodes, attr="type"] <- "sync"
+    grain_graph[from=leaf_tasks, to=leaf_join_nodes, attr="color"] <- sync_edge_color
+
+    if (!is.na(common_edge_weight[2])) {
+        temp <- apply_edge_weight_mapping(as.numeric(prof_data[match(leaf_tasks, prof_data$task),common_edge_weight[1]]), common_edge_weight[2])
+        grain_graph[from=leaf_tasks, to=leaf_join_nodes, attr="weight"] <- -temp
+    } else {
+        grain_graph[from=leaf_tasks, to=leaf_join_nodes, attr="weight"] <- -common_edge_weight[1]
+    }
+
+    if (cl_args$timing) toc("Connecting leaf task to join")
+
+    # Connect join to next fork
+    if (cl_args$timing) tic(type="elapsed")
+
+    #Rprof("profile-jointonext.out")
+    find_next_fork <- function(node)
+    {
+        #my_print(paste("Processing node",node, sep=" "))
+
+        # Get node info
+        node_split <- unlist(strsplit(node, "\\."))
+        parent <- as.numeric(node_split[2])
+        join_count <- as.numeric(node_split[3])
+
+        # Find next fork
+        next_fork <- paste('f', as.character(parent), as.character(join_count+1), sep=".")
+        if (is.na(match(next_fork, fork_nodes_unique)) == F) {
+            next_fork <- next_fork # Connect to next fork
+        } else {
+
+            # Next fork is part of grandfather
+            parent_index <- match(parent, prof_data$task)
+            gfather <- prof_data[parent_index,]$parent
+            gfather_join <- paste('j', as.character(gfather), as.character(prof_data[parent_index,]$joins_at), sep=".")
+
+            if (is.na(match(gfather_join, join_nodes_unique)) == F) {
+                next_fork <- gfather_join # Connect to grandfather's join
+            } else {
+                next_fork <- 'E' # Connect to end node
+            }
+        }
+        next_fork
+    }
+
+    next_forks <- as.vector(sapply(join_nodes_unique, find_next_fork))
+
+    grain_graph[from=join_nodes_unique, to=next_forks, attr="type"] <- "continue"
+    grain_graph[from=join_nodes_unique, to=next_forks, attr="color"] <- cont_edge_color
+
+    #Rprof(NULL)
+    if (cl_args$timing) toc("Connecting join to next fork")
 }
-
-next_forks <- as.vector(sapply(join_nodes_unique, find_next_fork))
-
-grain_graph[from=join_nodes_unique, to=next_forks, attr='type'] <- 'continue'
-grain_graph[from=join_nodes_unique, to=next_forks, attr='color'] <- cont_edge_color
-
-#Rprof(NULL)
-if (cl_args$timing) toc("Connecting join to next fork")
 
 #
 # Set attributes
@@ -397,78 +400,87 @@ if (cl_args$timing) toc("Connecting join to next fork")
 if (cl_args$verbose) my_print("Setting attributes ...")
 if (cl_args$timing) tic(type="elapsed")
 
-# Set task grain attributes
-task_index <- match(as.character(prof_data$task), V(grain_graph)$name)
-
+# Common attributes
 V(grain_graph)$label <- V(grain_graph)$name
-grain_graph <- set.vertex.attribute(grain_graph, name='shape', index=task_index, value=task_shape)
 
-# Set size
-if (!is.na(task_width[2])) {
-    temp <- apply_task_size_mapping(as.numeric(prof_data[,task_width[1]]), task_width[2])
-    grain_graph <- set.vertex.attribute(grain_graph, name=annot_name, index=task_index, value=temp)
+if (cl_args$full) {
 } else {
-    grain_graph <- set.vertex.attribute(grain_graph, name='width', index=task_index, value=task_width[1])
-}
-if (!is.na(task_height[2])) {
-    temp <- apply_task_size_mapping(as.numeric(prof_data[,task_height[1]]), task_height[2])
-    grain_graph <- set.vertex.attribute(grain_graph, name='height', index=task_index, value=temp)
-} else {
-    grain_graph <- set.vertex.attribute(grain_graph, name='height', index=task_index, value=task_height[1])
-}
+    # Set task grain attributes
+    task_index <- match(as.character(prof_data$task), V(grain_graph)$name)
+    grain_graph <- set.vertex.attribute(grain_graph, name="shape", index=task_index, value=task_shape)
+    grain_graph <- set.vertex.attribute(grain_graph, name="type", index=task_index, value="task")
 
-# Set color constants
-if (!is.na(task_color[2])) {
-    temp <- apply_task_color_mapping(as.numeric(prof_data[,task_color[1]]), task_color[2], paste("task-", task_color[1], "-", task_color[2], ".colormap", sep=""))
-    grain_graph <- set.vertex.attribute(grain_graph, name='color', index=task_index, value=temp)
-} else {
-    grain_graph <- set.vertex.attribute(grain_graph, name='color', index=task_index, value=task_color[1])
-}
+    # Set size
+    if (!is.na(task_width[2])) {
+        temp <- apply_task_size_mapping(as.numeric(prof_data[,task_width[1]]), task_width[2])
+        grain_graph <- set.vertex.attribute(grain_graph, name=annot_name, index=task_index, value=temp)
+    } else {
+        grain_graph <- set.vertex.attribute(grain_graph, name="width", index=task_index, value=task_width[1])
+    }
+    if (!is.na(task_height[2])) {
+        temp <- apply_task_size_mapping(as.numeric(prof_data[,task_height[1]]), task_height[2])
+        grain_graph <- set.vertex.attribute(grain_graph, name="height", index=task_index, value=temp)
+    } else {
+        grain_graph <- set.vertex.attribute(grain_graph, name="height", index=task_index, value=task_height[1])
+    }
 
-# Set annotations
-for (annot in colnames(prof_data)) {
-    values <- as.character(prof_data[,annot])
-    grain_graph <- set.vertex.attribute(grain_graph, name=annot, index=task_index, value=values)
-}
+    # Set color
+    if (!is.na(task_color[2])) {
+        temp <- apply_task_color_mapping(as.numeric(prof_data[,task_color[1]]), task_color[2], paste("task-", task_color[1], "-", task_color[2], ".colormap", sep=""))
+        grain_graph <- set.vertex.attribute(grain_graph, name="color", index=task_index, value=temp)
+    } else {
+        grain_graph <- set.vertex.attribute(grain_graph, name="color", index=task_index, value=task_color[1])
+    }
 
-# TODO: Map task size linearly based on "ins_count", "work_cycles", "overhead_cycles", "exec_cycles"
-# TODO: Map task color linearly based on "mem_fp", "-compute_int", "PAPI_RES_STL_sum", "-mem_hier_util", "work_deviation", "overhead_deviation", "-parallel_benefit", "-min_shape_contrib", "-max_shape_contrib","-median_shape_contrib", "sibling_work_balance"
-# "-" higher is better
-# TODO: Map task color linearly based on "sibling_scatter" for task-based profiling data
-# TODO: Map task color linearly based on "chunk_work_balance", "chunk_work_cpu_balance" for for-loop based profiling data
-# TODO: Map task color using linear-step mapping for "cpu_id", "outl_func", "tag", "outline_function"
+    # Set annotations
+    for (annot in colnames(prof_data)) {
+        values <- as.character(prof_data[,annot])
+        grain_graph <- set.vertex.attribute(grain_graph, name=annot, index=task_index, value=values)
+    }
+
+    # TODO: Map task size linearly based on "ins_count", "work_cycles", "overhead_cycles", "exec_cycles"
+    # TODO: Map task color linearly based on "mem_fp", "-compute_int", "PAPI_RES_STL_sum", "-mem_hier_util", "work_deviation", "overhead_deviation", "-parallel_benefit", "-min_shape_contrib", "-max_shape_contrib","-median_shape_contrib", "sibling_work_balance"
+    # "-" higher is better
+    # TODO: Map task color linearly based on "sibling_scatter" for task-based profiling data
+    # TODO: Map task color linearly based on "chunk_work_balance", "chunk_work_cpu_balance" for for-loop based profiling data
+    # TODO: Map task color using linear-step mapping for "cpu_id", "outl_func", "tag", "outline_function"
+}
 
 # Set attributes of start grain
 start_index <- V(grain_graph)$name == '0'
-grain_graph <- set.vertex.attribute(grain_graph, name='color', index=start_index, value=start_color)
-grain_graph <- set.vertex.attribute(grain_graph, name='label', index=start_index, value='S')
-grain_graph <- set.vertex.attribute(grain_graph, name='shape', index=start_index, value=start_shape)
-grain_graph <- set.vertex.attribute(grain_graph, name='width', index=start_index, value=start_width)
-grain_graph <- set.vertex.attribute(grain_graph, name='height', index=start_index, value=start_height)
+grain_graph <- set.vertex.attribute(grain_graph, name="color", index=start_index, value=start_color)
+grain_graph <- set.vertex.attribute(grain_graph, name="label", index=start_index, value='S')
+grain_graph <- set.vertex.attribute(grain_graph, name="shape", index=start_index, value=start_shape)
+grain_graph <- set.vertex.attribute(grain_graph, name="type", index=start_index, value="start")
+grain_graph <- set.vertex.attribute(grain_graph, name="width", index=start_index, value=start_width)
+grain_graph <- set.vertex.attribute(grain_graph, name="height", index=start_index, value=start_height)
 
 # Set attributes of end grain
 end_index <- V(grain_graph)$name == "E"
-grain_graph <- set.vertex.attribute(grain_graph, name='color', index=end_index, value=end_color)
-grain_graph <- set.vertex.attribute(grain_graph, name='label', index=end_index, value='E')
-grain_graph <- set.vertex.attribute(grain_graph, name='shape', index=end_index, value=end_shape)
-grain_graph <- set.vertex.attribute(grain_graph, name='width', index=end_index, value=end_width)
-grain_graph <- set.vertex.attribute(grain_graph, name='height', index=end_index, value=end_height)
+grain_graph <- set.vertex.attribute(grain_graph, name="color", index=end_index, value=end_color)
+grain_graph <- set.vertex.attribute(grain_graph, name="label", index=end_index, value='E')
+grain_graph <- set.vertex.attribute(grain_graph, name="shape", index=end_index, value=end_shape)
+grain_graph <- set.vertex.attribute(grain_graph, name="type", index=end_index, value="end")
+grain_graph <- set.vertex.attribute(grain_graph, name="width", index=end_index, value=end_width)
+grain_graph <- set.vertex.attribute(grain_graph, name="height", index=end_index, value=end_height)
 
 # Set fork grain attributes
 fork_nodes_index <- startsWith(V(grain_graph)$name, 'f')
-grain_graph <- set.vertex.attribute(grain_graph, name='color', index=fork_nodes_index, value=fork_color)
-grain_graph <- set.vertex.attribute(grain_graph, name='label', index=fork_nodes_index, value='^')
-grain_graph <- set.vertex.attribute(grain_graph, name='shape', index=fork_nodes_index, value=fork_shape)
-grain_graph <- set.vertex.attribute(grain_graph, name='width', index=fork_nodes_index, value=fork_width)
-grain_graph <- set.vertex.attribute(grain_graph, name='height', index=fork_nodes_index, value=fork_height)
+grain_graph <- set.vertex.attribute(grain_graph, name="color", index=fork_nodes_index, value=fork_color)
+grain_graph <- set.vertex.attribute(grain_graph, name="label", index=fork_nodes_index, value='^')
+grain_graph <- set.vertex.attribute(grain_graph, name="shape", index=fork_nodes_index, value=fork_shape)
+grain_graph <- set.vertex.attribute(grain_graph, name="type", index=fork_nodes_index, value="fork")
+grain_graph <- set.vertex.attribute(grain_graph, name="width", index=fork_nodes_index, value=fork_width)
+grain_graph <- set.vertex.attribute(grain_graph, name="height", index=fork_nodes_index, value=fork_height)
 
 # Set join grain attributes
 join_nodes_index <- startsWith(V(grain_graph)$name, 'j')
-grain_graph <- set.vertex.attribute(grain_graph, name='color', index=join_nodes_index, value=join_color)
-grain_graph <- set.vertex.attribute(grain_graph, name='label', index=join_nodes_index, value='*')
-grain_graph <- set.vertex.attribute(grain_graph, name='shape', index=join_nodes_index, value=join_shape)
-grain_graph <- set.vertex.attribute(grain_graph, name='width', index=join_nodes_index, value=join_width)
-grain_graph <- set.vertex.attribute(grain_graph, name='height', index=join_nodes_index, value=join_height)
+grain_graph <- set.vertex.attribute(grain_graph, name="color", index=join_nodes_index, value=join_color)
+grain_graph <- set.vertex.attribute(grain_graph, name="label", index=join_nodes_index, value='*')
+grain_graph <- set.vertex.attribute(grain_graph, name="shape", index=join_nodes_index, value=join_shape)
+grain_graph <- set.vertex.attribute(grain_graph, name="type", index=join_nodes_index, value="join")
+grain_graph <- set.vertex.attribute(grain_graph, name="width", index=join_nodes_index, value=join_width)
+grain_graph <- set.vertex.attribute(grain_graph, name="height", index=join_nodes_index, value=join_height)
 
 # Set edge attributes
 # Set weight to zero for edges not assigned weight before (essential for critical path calculation)
@@ -484,12 +496,15 @@ if (cl_args$timing) tic(type="elapsed")
 
 bad_structure <- 0
 
-if ((is.element(0, degree(grain_graph, fork_nodes_index, mode = c("in")))) ||
-    (is.element(0, degree(grain_graph, fork_nodes_index, mode = c("out")))) ||
-    (is.element(0, degree(grain_graph, join_nodes_index, mode = c("in")))) ||
-    (is.element(0, degree(grain_graph, join_nodes_index, mode = c("out"))))) {
-    my_print("Warning! One or more join nodes have zero degree since one or more tasks in the program performed empty synchronization.")
-    bad_structure <- 1
+if (cl_args$full) {
+} else {
+    if ((is.element(0, degree(grain_graph, fork_nodes_index, mode = c("in")))) ||
+        (is.element(0, degree(grain_graph, fork_nodes_index, mode = c("out")))) ||
+        (is.element(0, degree(grain_graph, join_nodes_index, mode = c("in")))) ||
+        (is.element(0, degree(grain_graph, join_nodes_index, mode = c("out"))))) {
+        my_print("Warning! One or more join nodes have zero degree since one or more tasks in the program performed empty synchronization.")
+        bad_structure <- 1
+    }
 }
 
 if (bad_structure == 1) {
@@ -532,7 +547,10 @@ if (!cl_args$enumcriticalpath) {
     {
         # Get distance from node's predecessors
         incident_edges <- incident(grain_graph, node, mode="in")
-        incident_edge_weights <- -E(grain_graph)[incident_edges]$weight
+        if (cl_args$full) {
+        } else {
+            incident_edge_weights <- -E(grain_graph)[incident_edges]$weight
+        }
         # Get distance from root to node's predecessors
         adjacent_nodes <- neighbors(grain_graph, node, mode="in")
         adjacent_nodes_root_dist <- graph_vertices$root_dist[adjacent_nodes]
@@ -584,7 +602,9 @@ my_print("# Structure")
 my_print(paste("Number of nodes =", length(V(grain_graph))))
 my_print(paste("Number of edges =", length(E(grain_graph))))
 my_print(paste("Number of tasks =", length(prof_data$task)))
-my_print(paste("Number of forks =", length(fork_nodes_unique)))
+if (cl_args$full) {
+}
+my_print(paste("Number of forks =", length(unique(as.character(get.vertex.attribute(grain_graph, name="name", index=fork_nodes_index))))))
 my_print("# Out-degree distribution of forks")
 degree.distribution(grain_graph, v=fork_nodes_index, mode="out")
 if (!is.na(common_edge_weight[2])) {
@@ -601,7 +621,10 @@ if (!is.na(common_edge_weight[2])) {
     my_print(paste("Parallelism (Work/Span) =", work/critical_path))
 }
 if (cl_args$enumcriticalpath) {
-    my_print(paste("Number of critical tasks =", length(graph_vertices$task[graph_vertices$on_crit_path == 1 & !is.na(graph_vertices$task)])))
+    if (cl_args$full) {
+    } else {
+        my_print(paste("Number of critical tasks =", length(graph_vertices$name[graph_vertices$on_crit_path == 1 & graph_vertices$type == "task"])))
+    }
 }
 sink()
 
