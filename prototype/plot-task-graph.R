@@ -60,7 +60,7 @@ sink(grain_graph_info_out_file)
 sink()
 
 # Read profiling data
-prof_data <- read.csv(cl_args$data, header=TRUE, na.strings="NA")
+prof_data <- read.csv(cl_args$data, header=TRUE, comment.char='#', na.strings="NA")
 
 # Remove background task
 prof_data <- prof_data[!is.na(prof_data$parent),]

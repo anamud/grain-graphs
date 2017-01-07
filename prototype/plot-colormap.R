@@ -23,7 +23,7 @@ if(!exists("data", where=parsed)) {
 # Read data
 if(parsed$verbose) print(paste("Reading file", parsed$data))
 
-cm_data <- read.csv(parsed$data, header=TRUE)
+cm_data <- read.csv(parsed$data, header=TRUE, comment.char='#', na.strings="NA")
 cm_data <- cm_data[complete.cases(cm_data),]
 outf <- paste(gsub("\\.", "-", parsed$data), ".pdf", sep="")
 
