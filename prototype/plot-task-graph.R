@@ -29,6 +29,7 @@ if (Rstudio_mode) {
                         make_option(c("--enumcriticalpath"), action="store_true", default=FALSE, help="Enumerate nodes on critical path."),
                         make_option(c("--forloop"), action="store_true", default=FALSE, help="Task profiling data obtained from a for-loop program."),
                         make_option(c("--unreduced"), action="store_true", default=FALSE, help="Plot unreduced graph (with fragments)"),
+                        make_option(c("--overlap"), default="any", help = "Overlap type for instantaneous parallelism calculation. Choices: any, within. [default \"%default\"].", metavar="STRING"),
                         make_option(c("--layout"), action="store_true", default=FALSE, help="Layout using Sugiyama style and plot to PDF."),
                         make_option(c("--verbose"), action="store_true", default=TRUE, help="Print output [default]."),
                         make_option(c("--quiet"), action="store_false", dest="verbose", help="Print little output."),
@@ -788,6 +789,89 @@ if (!cl_args$enumcriticalpath) {
 #Rprof(NULL)
 
 if (cl_args$timing) toc("Calculating critical path")
+
+if (cl_args$unreduced) {
+    #
+    # Calculate instantaneous parellelism
+    # Note: Instantaneous parallelism is found by counting overlapping ranges.
+    # See question http://stackoverflow.com/questions/30978837/histogram-like-summary-for-interval-data
+    #
+
+    if (cl_args$verbose) my_print("Calculating instantaneous parellelism ...")
+    if (cl_args$timing) tic(type="elapsed")
+
+    # Select only fragments
+    graph_fragments <- graph_vertices[with(graph_vertices, grepl("^[0-9]+.[0-9]+$", name)),]
+
+    # Compute execution ranges
+    # Each fragment has exection range [root_dist, root_dist + exec_cycles], based on the premise of earliest possible execution.
+    graph_fragments$root_dist_exec_cycles <- graph_fragments$root_dist + graph_fragments$exec_cycles
+
+    # Overlap boundaries
+    overlap_interval_width <- median(graph_fragments$exec_cycles)
+    stopifnot(overlap_interval_width > 0)
+    overlap_bins_lower <- seq(0, max(graph_fragments$root_dist_exec_cycles) + 1 + overlap_interval_width, by=overlap_interval_width)
+    stopifnot(length(overlap_bins_lower) > 1)
+    overlap_bins_upper <- overlap_bins_lower + (overlap_bins_lower[2] - overlap_bins_lower[1] - 1)
+
+    # Get overlapping ranges
+    # Use IRanges package to countOverlaps using the fast NCList data structure.
+    #suppressMessages(library(IRanges, quietly=TRUE, warn.conflicts=FALSE))
+    #subject <- IRanges(graph_fragments$root_dist, graph_fragments$root_dist_exec_cycles)
+    #query <- IRanges(overlap_bins_lower, overlap_bins_upper)
+    #inst_par <- data.frame(low=overlap_bins_lower, count=countOverlaps(query, subject))
+
+    # Get overlapping ranges
+    # Use foverlaps from data.table.
+    # See Arun's answer here:  http://stackoverflow.com/questions/30978837/histogram-like-summary-for-interval-data
+    subject <- data.table(interval =  graph_fragments$name,
+                          start = graph_fragments$root_dist,
+                          end = graph_fragments$root_dist_exec_cycles)
+    query <- data.table(start = overlap_bins_lower,
+                        end = overlap_bins_upper)
+    setkey(subject, start, end)
+    overlaps <- foverlaps(query, subject, type=cl_args$overlap)
+    overlaps <- overlaps[,
+                         .(count = sum(!is.na(start)), fragment = paste(interval, collapse=";")),
+                         by = .(i.start, i.end)]
+    inst_par <- data.frame(low=overlap_bins_lower, count=overlaps$count)
+
+    # Write instantaneous parallelism as bar graph of root distance
+    temp_out_file <- paste(gsub(". $", "", cl_args$out), "-instantaneous-parallelism.pdf", sep="")
+    pdf(temp_out_file)
+    plot(inst_par, xlab="Distance from start node in execution cycles", ylab="Fragments", main="Instantaneous parallelism (black bars)\n Cilk average parallelism (red line)\n Number of cores (blue line)", col="black", type='h', yaxs='i')
+    abline(h = length(unique(prof_data$cpu_id)), col = "blue", lty=2)
+    if (!is.na(common_edge_weight[2])) {
+        work <- sum(as.numeric(prof_data[,common_edge_weight[1]]))
+    } else {
+        work <- nrow(prof_data)*common_edge_weight[1]
+    }
+    abline(h = work/critical_path, col = "red", lty=1)
+    res <- dev.off()
+    my_print(paste("Wrote file:", temp_out_file))
+
+    # Write instantaneous parallelism raw data to file
+    temp_out_file <- paste(gsub(". $", "", cl_args$out), "-instantaneous-parallelism-raw.csv", sep="")
+    res <- write.csv(overlaps, file=temp_out_file, row.names=F)
+    my_print(paste("Wrote file:", temp_out_file))
+
+    # Compute contribution of each task to instantaneous parallelism
+    # Remove overlaps where count is NA
+    overlaps[fragment == "NA"] <- NA
+    overlaps <- overlaps[complete.cases(overlaps),]
+    # Convert fragment list into rows
+    overlaps <- overlaps[, list(count, fragment = as.numeric(unlist(strsplit(as.character(fragment), ';' )))), by = .(i.start, i.end)]
+    # Get task of fragment
+    overlaps$task <- as.integer(overlaps$fragment)
+    overlaps_agg <- overlaps[, j=list(median_inst_par_contrib = as.numeric(median(count, na.rm = TRUE)), min_inst_par_contrib = as.numeric(min(count, na.rm = TRUE)), max_inst_par_contrib = as.numeric(max(count, na.rm = TRUE))), by=list(task)]
+
+    # Write per task contribution to instantaneous parallelism to file
+    temp_out_file <- paste(gsub(". $", "", cl_args$out), "-instantaneous-parallelism-contribution.csv", sep="")
+    res <- write.csv(overlaps_agg, file=temp_out_file, row.names=F)
+    my_print(paste("Wrote file:", temp_out_file))
+
+    if (cl_args$timing) toc("Calculating instantaneous parallelism")
+}
 
 #
 # Compute basic information about grain graph
