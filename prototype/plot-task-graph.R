@@ -25,7 +25,7 @@ if (Rstudio_mode) {
     option_list <- list(make_option(c("-d","--data"), help = "Task profiling data.", metavar="FILE"),
                         make_option(c("--grainpropertyconfig"), default="grain-properties.cfg", help = "Grain property configuration file [default \"%default\"].", metavar="FILE"),
                         make_option(c("--edgepropertyconfig"), default="edge-properties.cfg", help = "Edge property configuration file [default \"%default\"].", metavar="FILE"),
-                        make_option(c("-o","--out"), default="grain-graph", help = "Output file suffix [default \"%default\"].", metavar="STRING"),
+                        make_option(c("-o","--out"), default="grain-graph", help = "Output file prefix [default \"%default\"].", metavar="STRING"),
                         make_option(c("--enumcriticalpath"), action="store_true", default=FALSE, help="Enumerate nodes on critical path."),
                         make_option(c("--forloop"), action="store_true", default=FALSE, help="Task profiling data obtained from a for-loop program."),
                         make_option(c("--unreduced"), action="store_true", default=FALSE, help="Plot unreduced graph (with fragments)"),
