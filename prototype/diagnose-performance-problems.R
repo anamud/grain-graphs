@@ -69,7 +69,7 @@ grain_graph <- set.edge.attribute(grain_graph, name='color', value=edge_colors_d
 grain_graph <- set.vertex.attribute(grain_graph, name='problematic', value=0)
 
 # Read problem threshold config
-grain_problems <- read.csv(cl_args$grainproblemconfig, header=TRUE, , comment.char='#', na.strings="NA")
+grain_problems <- read.csv(cl_args$grainproblemconfig, header=TRUE, comment.char='#', na.strings="NA")
 
 if (cl_args$timing) toc("Initializing")
 
