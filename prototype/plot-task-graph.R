@@ -644,7 +644,7 @@ if (cl_args$unreduced) {
     }
 
     # TODO: Map task size linearly based on "ins_count", "work_cycles", "overhead_cycles", "exec_cycles"
-    # TODO: Map task color linearly based on "mem_fp", "-compute_int", "PAPI_RES_STL_sum", "-mem_hier_util", "work_deviation", "overhead_deviation", "-parallel_benefit", "-min_shape_contrib", "-max_shape_contrib","-median_shape_contrib", "sibling_work_balance"
+    # TODO: Map task color linearly based on "mem_fp", "-compute_int", "PAPI_RES_STL_sum", "-mem_hier_util", "work_deviation", "overhead_deviation", "-parallel_benefit", "-inst_par_median", "-inst_par_max","-inst_par_min", "sibling_work_balance"
     # "-" higher is better
     # TODO: Map task color linearly based on "sibling_scatter" for task-based profiling data
     # TODO: Map task color linearly based on "chunk_work_balance", "chunk_work_cpu_balance" for for-loop based profiling data
@@ -874,7 +874,7 @@ if (cl_args$unreduced) {
     overlaps <- overlaps[, list(count, fragment = as.numeric(unlist(strsplit(as.character(fragment), ';' )))), by = .(i.start, i.end)]
     # Get task of fragment
     overlaps$task <- as.integer(overlaps$fragment)
-    overlaps_agg <- overlaps[, j=list(median_inst_par_contrib = as.numeric(median(count, na.rm = TRUE)), min_inst_par_contrib = as.numeric(min(count, na.rm = TRUE)), max_inst_par_contrib = as.numeric(max(count, na.rm = TRUE))), by=list(task)]
+    overlaps_agg <- overlaps[, j=list(inst_par_median = as.numeric(median(count, na.rm = TRUE)), inst_par_min = as.numeric(min(count, na.rm = TRUE)), inst_par_max = as.numeric(max(count, na.rm = TRUE))), by=list(task)]
 
     # Write per task contribution to instantaneous parallelism to file
     temp_out_file <- paste(gsub(". $", "", cl_args$out), "-instantaneous-parallelism-contribution.csv", sep="")
