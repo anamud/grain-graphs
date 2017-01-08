@@ -644,28 +644,6 @@ if (cl_args$unreduced) {
     grain_graph <- set.vertex.attribute(grain_graph, name="shape", index=task_index, value=task_shape)
     grain_graph <- set.vertex.attribute(grain_graph, name="type", index=task_index, value="task")
 
-    # Set size
-    if (!is.na(task_width[2])) {
-        temp <- apply_task_size_mapping(as.numeric(prof_data[,task_width[1]]), task_width[2])
-        grain_graph <- set.vertex.attribute(grain_graph, name=annot_name, index=task_index, value=temp)
-    } else {
-        grain_graph <- set.vertex.attribute(grain_graph, name="width", index=task_index, value=task_width[1])
-    }
-    if (!is.na(task_height[2])) {
-        temp <- apply_task_size_mapping(as.numeric(prof_data[,task_height[1]]), task_height[2])
-        grain_graph <- set.vertex.attribute(grain_graph, name="height", index=task_index, value=temp)
-    } else {
-        grain_graph <- set.vertex.attribute(grain_graph, name="height", index=task_index, value=task_height[1])
-    }
-
-    # Set color
-    if (!is.na(task_color[2])) {
-        temp <- apply_task_color_mapping(as.numeric(prof_data[,task_color[1]]), task_color[2], paste("task-", task_color[1], "-", task_color[2], ".colormap", sep=""))
-        grain_graph <- set.vertex.attribute(grain_graph, name="color", index=task_index, value=temp)
-    } else {
-        grain_graph <- set.vertex.attribute(grain_graph, name="color", index=task_index, value=task_color[1])
-    }
-
     # Set annotations
     for (annot in colnames(prof_data)) {
         values <- as.character(prof_data[,annot])
@@ -885,6 +863,48 @@ if (cl_args$unreduced) {
 
     if (cl_args$timing) toc("Calculating instantaneous parallelism")
 }
+
+#
+# Set attributes (post graph computation)
+#
+if (cl_args$verbose) my_print("Setting attributes post graph computation...")
+if (cl_args$timing) tic(type="elapsed")
+
+if (!(cl_args$unreduced)) {
+    # Set task grain attributes
+    task_index <- match(as.character(prof_data$task), V(grain_graph)$name)
+
+    # Set size
+    if (!is.na(task_width[2])) {
+        temp <- apply_task_size_mapping(as.numeric(prof_data[,task_width[1]]), task_width[2])
+        grain_graph <- set.vertex.attribute(grain_graph, name=annot_name, index=task_index, value=temp)
+    } else {
+        grain_graph <- set.vertex.attribute(grain_graph, name="width", index=task_index, value=task_width[1])
+    }
+    if (!is.na(task_height[2])) {
+        temp <- apply_task_size_mapping(as.numeric(prof_data[,task_height[1]]), task_height[2])
+        grain_graph <- set.vertex.attribute(grain_graph, name="height", index=task_index, value=temp)
+    } else {
+        grain_graph <- set.vertex.attribute(grain_graph, name="height", index=task_index, value=task_height[1])
+    }
+
+    # Set color
+    if (!is.na(task_color[2])) {
+        temp <- apply_task_color_mapping(as.numeric(prof_data[,task_color[1]]), task_color[2], paste("task-", task_color[1], "-", task_color[2], ".colormap", sep=""))
+        grain_graph <- set.vertex.attribute(grain_graph, name="color", index=task_index, value=temp)
+    } else {
+        grain_graph <- set.vertex.attribute(grain_graph, name="color", index=task_index, value=task_color[1])
+    }
+
+    # TODO: Map task size linearly based on "ins_count", "work_cycles", "overhead_cycles", "exec_cycles"
+    # TODO: Map task color linearly based on "mem_fp", "-compute_int", "PAPI_RES_STL_sum", "-mem_hier_util", "work_deviation", "overhead_deviation", "-parallel_benefit", "-inst_par_median", "-inst_par_max","-inst_par_min", "sibling_work_balance"
+    # "-" higher is better
+    # TODO: Map task color linearly based on "sibling_scatter" for task-based profiling data
+    # TODO: Map task color linearly based on "chunk_work_balance", "chunk_work_cpu_balance" for for-loop based profiling data
+    # TODO: Map task color using linear-step mapping for "cpu_id", "outl_func", "tag", "outline_function"
+}
+
+if (cl_args$timing) toc("Setting attributes post graph computation")
 
 #
 # Compute basic information about grain graph
