@@ -492,6 +492,15 @@ if (cl_args$unreduced) {
     grain_graph <- set.vertex.attribute(grain_graph, name="type", index=fragment_index, value=graph_vertices[fragment_index,]$type)
     grain_graph <- set.vertex.attribute(grain_graph, name="shape", index=fragment_index, value=task_shape)
 
+    fragment_tasks <- as.integer(get.vertex.attribute(grain_graph, name="name", index=fragment_index))
+    for (annot in colnames(prof_data)) {
+        if(annot %in% c("name","label","type","shape","exec_cycles")) {
+           next
+        }
+        values <- as.character(prof_data[match(fragment_tasks, prof_data$task),annot])
+        grain_graph <- set.vertex.attribute(grain_graph, name=annot, index=fragment_index, value=values)
+    }
+
     # Compute fragment execution cycles
     compute_fragment_duration <- function(task, wait, exec_cycles, choice)
     {
