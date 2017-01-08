@@ -563,13 +563,19 @@ if (cl_args$unreduced) {
         grain_graph <- set.vertex.attribute(grain_graph, name="height", index=fragment_index, value=task_height[1])
     }
 
-    # Set fragment color to constant or based on execution cycles
+    # Set fragment color to constant or based on execution cycles, CPU, outline function, tag, or source line
     if (!is.na(task_color[2])) {
-        if (task_color[1] != "exec_cycles") {
-            my_print(paste("Error: Cannot map fragment color to", task_color[1], ". Available mapping options are: exec_cyles."))
+        sensible_mappings <- c("exec_cycles","cpu_id","outline_function","tag","source_line")
+        if (!(task_color[1] %in% sensible_mappings)) {
+            temp <- paste(sensible_mappings, collapse = ", ")
+            my_print(paste("Error: Cannot map fragment color to", task_color[1], ". Available mapping options are:", temp))
             quit("no", 1)
         } else {
-            temp <- apply_task_color_mapping(fragment_exec_cycles, task_color[2], paste("task-", task_color[1], "-", task_color[2], ".colormap", sep=""))
+            if (task_color[1] == "exec_cycles") {
+                temp <- apply_task_color_mapping(fragment_exec_cycles, task_color[2], paste("task-", task_color[1], "-", task_color[2], ".colormap", sep=""))
+            } else {
+                temp <- apply_task_color_mapping(as.character(get.vertex.attribute(grain_graph, name=task_color[1], index=fragment_index)), task_color[2], paste("task-", task_color[1], "-", task_color[2], ".colormap", sep=""))
+            }
             grain_graph <- set.vertex.attribute(grain_graph, name="color", index=fragment_index, value=temp)
         }
     } else {
@@ -603,8 +609,6 @@ if (cl_args$unreduced) {
     # Set edge type and color
     grain_graph <- set.edge.attribute(grain_graph, name="type", index=E(grain_graph), value="scope")
     grain_graph <- set.edge.attribute(grain_graph, name="color", index=E(grain_graph), value=scope_edge_color)
-
-    # TODO: Set size and color based on other attributes
 } else {
     # Set task grain attributes
     task_index <- match(as.character(prof_data$task), V(grain_graph)$name)
