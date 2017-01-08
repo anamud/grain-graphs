@@ -1,0 +1,10 @@
+Grain Graphs
+Copyright 2014-2017 Ananya Muddukrishna
+
+The grain graph is a performance visualization method for OpenMP programs.
+
+# Citation
+
+If you use grain graphs in your work, please cite its debut publication:
+
+Muddukrishna, Ananya, P. A. Jonsson, A. Podobas, and M. Brorsson, "Grain Graphs: OpenMP Performance Analysis Made Easy," in Proceedings of the 21st ACM SIGPLAN Symposium on Principles and Practice of Parallel Programming, New York, NY, USA, 2016, p. 28:1–28:13.
