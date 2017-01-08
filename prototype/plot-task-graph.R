@@ -479,6 +479,8 @@ bad_structure <- 0
 if (cl_args$unreduced) {
     bad_structure <- 0
 } else {
+    fork_nodes_index <- startsWith(V(grain_graph)$name, 'f')
+    join_nodes_index <- startsWith(V(grain_graph)$name, 'j')
     if ((is.element(0, degree(grain_graph, fork_nodes_index, mode = c("in")))) ||
         (is.element(0, degree(grain_graph, fork_nodes_index, mode = c("out")))) ||
         (is.element(0, degree(grain_graph, join_nodes_index, mode = c("in")))) ||
