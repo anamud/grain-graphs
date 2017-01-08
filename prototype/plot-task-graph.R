@@ -479,17 +479,14 @@ V(grain_graph)$label <- V(grain_graph)$name
 
 if (cl_args$unreduced) {
     # Set fragment grain attributes
-    graph_vertices <- data.table(node=get.data.frame(grain_graph, what="vertices")$name, exec_cycles=0, type="fragment")
-    #pesky_factors <- sapply(graph_vertices, is.factor)
-    #graph_vertices[pesky_factors] <- lapply(graph_vertices[pesky_factors], as.character)
+    vertex_names <- get.vertex.attribute(grain_graph, name="name", index=V(grain_graph))
+    fragment_index <- which(grepl("^[0-9]+.[0-9]+$", vertex_names))
+    #start_index <- which(grepl("^f.0.1$", vertex_names))
+    #end_index <- which(grepl("^j.0.0$", vertex_names))
+    #fork_index <- which(grepl("^f.[0-9]+.[0-9]+$", vertex_names))
+    #join_index <- which(grepl("^j.[0-9]+.[0-9]+$", vertex_names))
 
-    fragment_index <- with(graph_vertices, grepl("^[0-9]+.[0-9]+$", node))
-    #start_index <- with(graph_vertices, grepl("^f.0.1$", node))
-    #end_index <- with(graph_vertices, grepl("^j.0.0$", node))
-    #fork_index <- with(graph_vertices, grepl("^f.[0-9]+.[0-9]+$", node))
-    #join_index <- with(graph_vertices, grepl("^j.[0-9]+.[0-9]+$", node))
-
-    grain_graph <- set.vertex.attribute(grain_graph, name="type", index=fragment_index, value=graph_vertices[fragment_index,]$type)
+    grain_graph <- set.vertex.attribute(grain_graph, name="type", index=fragment_index, value="fragment")
     grain_graph <- set.vertex.attribute(grain_graph, name="shape", index=fragment_index, value=task_shape)
 
     fragment_tasks <- as.integer(get.vertex.attribute(grain_graph, name="name", index=fragment_index))
@@ -527,7 +524,7 @@ if (cl_args$unreduced) {
             return(durations)
     }
 
-    fd <- data.table(fragment=unlist(mapply(compute_fragment_duration,
+    fragment_duration <- data.table(fragment=unlist(mapply(compute_fragment_duration,
                                             task=prof_data$task,
                                             wait=prof_data$wait_instants,
                                             exec_cycles=prof_data$exec_cycles,
@@ -537,8 +534,10 @@ if (cl_args$unreduced) {
                                             wait=prof_data$wait_instants,
                                             exec_cycles=prof_data$exec_cycles,
                                             choice=2)))
-    graph_vertices[match(fd$fragment, graph_vertices$node)]$exec_cycles <- fd$duration
-    grain_graph <- set.vertex.attribute(grain_graph, name="exec_cycles", index=V(grain_graph), value=graph_vertices$exec_cycles)
+
+    fragment_exec_cycles <- fragment_duration$duration[match(fragment_duration$fragment, vertex_names[fragment_index])]
+    grain_graph <- set.vertex.attribute(grain_graph, name="exec_cycles", index=V(grain_graph), value=0)
+    grain_graph <- set.vertex.attribute(grain_graph, name="exec_cycles", index=fragment_index, value=fragment_exec_cycles)
 
     # Set fragment size to constant or based on execution cycles
     if (!is.na(task_width[2])) {
@@ -546,22 +545,22 @@ if (cl_args$unreduced) {
             my_print(paste("Error: Cannot map fragment width to", task_width[1], ". Available mapping options are: exec_cyles."))
             quit("no", 1)
         } else {
-            temp <- apply_task_size_mapping(as.numeric(graph_vertices$exec_cycles), task_width[2])
-            grain_graph <- set.vertex.attribute(grain_graph, name="height", index=V(grain_graph), value=temp)
+            temp <- apply_task_size_mapping(fragment_exec_cycles, task_width[2])
+            grain_graph <- set.vertex.attribute(grain_graph, name="height", index=fragment_index, value=temp)
         }
     } else {
-        grain_graph <- set.vertex.attribute(grain_graph, name="width", index=V(grain_graph), value=task_width[1])
+        grain_graph <- set.vertex.attribute(grain_graph, name="width", index=fragment_index, value=task_width[1])
     }
     if (!is.na(task_height[2])) {
         if (task_height[1] != "exec_cycles") {
             my_print(paste("Error: Cannot map fragment height to", task_height[1], ". Available mapping options are: exec_cyles."))
             quit("no", 1)
         } else {
-            temp <- apply_task_size_mapping(as.numeric(graph_vertices$exec_cycles), task_height[2])
-            grain_graph <- set.vertex.attribute(grain_graph, name="height", index=V(grain_graph), value=temp)
+            temp <- apply_task_size_mapping(fragment_exec_cycles, task_height[2])
+            grain_graph <- set.vertex.attribute(grain_graph, name="height", index=fragment_index, value=temp)
         }
     } else {
-        grain_graph <- set.vertex.attribute(grain_graph, name="height", index=V(grain_graph), value=task_height[1])
+        grain_graph <- set.vertex.attribute(grain_graph, name="height", index=fragment_index, value=task_height[1])
     }
 
     # Set fragment color to constant or based on execution cycles
@@ -570,11 +569,11 @@ if (cl_args$unreduced) {
             my_print(paste("Error: Cannot map fragment color to", task_color[1], ". Available mapping options are: exec_cyles."))
             quit("no", 1)
         } else {
-            temp <- apply_task_color_mapping(as.numeric(graph_vertices$exec_cycles), task_color[2], paste("task-", task_color[1], "-", task_color[2], ".colormap", sep=""))
-            grain_graph <- set.vertex.attribute(grain_graph, name="color", index=V(grain_graph), value=temp)
+            temp <- apply_task_color_mapping(fragment_exec_cycles, task_color[2], paste("task-", task_color[1], "-", task_color[2], ".colormap", sep=""))
+            grain_graph <- set.vertex.attribute(grain_graph, name="color", index=fragment_index, value=temp)
         }
     } else {
-        grain_graph <- set.vertex.attribute(grain_graph, name="color", index=V(grain_graph), value=task_color[1])
+        grain_graph <- set.vertex.attribute(grain_graph, name="color", index=fragment_index, value=task_color[1])
     }
 
     # Set edge weight
@@ -605,7 +604,6 @@ if (cl_args$unreduced) {
     grain_graph <- set.edge.attribute(grain_graph, name="type", index=E(grain_graph), value="scope")
     grain_graph <- set.edge.attribute(grain_graph, name="color", index=E(grain_graph), value=scope_edge_color)
 
-    # TODO: Add annotations
     # TODO: Set size and color based on other attributes
 } else {
     # Set task grain attributes
