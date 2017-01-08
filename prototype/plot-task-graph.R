@@ -469,6 +469,33 @@ if (cl_args$unreduced) {
 }
 
 #
+# Check if grain graph has bad structure
+#
+if (cl_args$verbose) my_print("Checking for bad structure ...")
+if (cl_args$timing) tic(type="elapsed")
+
+bad_structure <- 0
+
+if (cl_args$unreduced) {
+    bad_structure <- 0
+} else {
+    if ((is.element(0, degree(grain_graph, fork_nodes_index, mode = c("in")))) ||
+        (is.element(0, degree(grain_graph, fork_nodes_index, mode = c("out")))) ||
+        (is.element(0, degree(grain_graph, join_nodes_index, mode = c("in")))) ||
+        (is.element(0, degree(grain_graph, join_nodes_index, mode = c("out"))))) {
+        my_print("Warning! One or more join nodes have zero degree since one or more tasks in the program performed empty synchronization.")
+        bad_structure <- 1
+    }
+}
+
+if (bad_structure == 1) {
+    my_print("Graph has bad structure. Aborting on error!")
+    quit("no", 1)
+}
+
+if (cl_args$timing) toc("Checking for bad structure")
+
+#
 # Set attributes
 #
 if (cl_args$verbose) my_print("Setting attributes ...")
@@ -692,33 +719,6 @@ grain_graph <- set.vertex.attribute(grain_graph, name="height", index=join_nodes
 grain_graph <- set.edge.attribute(grain_graph, name="weight", index=which(is.na(E(grain_graph)$weight)), value=0)
 
 if (cl_args$timing) toc("Setting attributes")
-
-#
-# Check if grain graph has bad structure
-#
-if (cl_args$verbose) my_print("Checking for bad structure ...")
-if (cl_args$timing) tic(type="elapsed")
-
-bad_structure <- 0
-
-if (cl_args$unreduced) {
-    bad_structure <- 0
-} else {
-    if ((is.element(0, degree(grain_graph, fork_nodes_index, mode = c("in")))) ||
-        (is.element(0, degree(grain_graph, fork_nodes_index, mode = c("out")))) ||
-        (is.element(0, degree(grain_graph, join_nodes_index, mode = c("in")))) ||
-        (is.element(0, degree(grain_graph, join_nodes_index, mode = c("out"))))) {
-        my_print("Warning! One or more join nodes have zero degree since one or more tasks in the program performed empty synchronization.")
-        bad_structure <- 1
-    }
-}
-
-if (bad_structure == 1) {
-    my_print("Graph has bad structure. Aborting on error!")
-    quit("no", 1)
-}
-
-if (cl_args$timing) toc("Checking for bad structure")
 
 #
 # Calculate critical path
