@@ -576,7 +576,7 @@ if (cl_args$unreduced) {
         grain_graph <- set.vertex.attribute(grain_graph, name="color", index=fragment_index, value=task_color[1])
     }
 
-    # Set edge weight
+    # Set edge weight to constant or based on execution cycles
     if (!is.na(common_edge_weight[2])) {
         if (common_edge_weight[1] != "exec_cycles") {
             my_print(paste("Error: Cannot map edge weight to", common_edge_weight[1], ". Available mapping options are: exec_cyles."))
