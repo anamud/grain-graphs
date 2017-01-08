@@ -117,7 +117,7 @@ diagnose_problem <- function(problem_type, problem_variable, problem_condition)
             my_print(paste("Wrote file:", temp_out_file))
         }
     } else {
-        my_print(paste("Error: Problem", problem_type, "could not be diagnosed since", problem_variable, "attribute is missing in graph!"))
+        my_print(paste("Warning: Problem", problem_type, "is not diagnosed since", problem_variable, "attribute is missing in graph!"))
     }
 
     return(NA)
