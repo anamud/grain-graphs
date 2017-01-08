@@ -99,7 +99,7 @@ diagnose_problem <- function(problem_type, problem_variable, problem_condition)
         my_print(problem_info_text)
         sink()
 
-        problem_tasks_index <- match(as.character(problem_tasks$task), V(problem_graph)$name)
+        problem_tasks_index <- match(as.character(problem_tasks$task), V(problem_graph)$task)
         problem_graph <- set.vertex.attribute(problem_graph, name='color', index=problem_tasks_index, value="#FF0000")
         problem_graph <- set.vertex.attribute(problem_graph, name='problematic', index=problem_tasks_index, value=1)
 
