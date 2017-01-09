@@ -27,7 +27,7 @@ if (Rstudio_mode) {
 } else {
   option_list <- list(
     make_option(c("-d","--data"), help = "Processed task stats.", metavar="FILE"),
-    make_option(c("--graph"), help = "Task graph (GRAPHML).", metavar="FILE"), # Cannot add -g as option since it is cl_args by Rscript as "gui" option
+    make_option(c("--graph"), help = "Task graph (GRAPHML).", metavar="FILE"), # Cannot add -g as option since it is parsed by Rscript as "gui" option
     make_option(c("--verbose"), action="store_true", default=TRUE, help="Print output [default]."),
     make_option(c("--timing"), action="store_true", default=FALSE, help="Print timing information."),
     make_option(c("--outdata"), default="task-stats.aggregated", help = "Task stats output file name [default \"%default\"]", metavar="STRING"),
