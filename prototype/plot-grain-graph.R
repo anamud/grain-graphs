@@ -523,7 +523,14 @@ if (cl_args$unreduced) {
         if(annot %in% c("name","label","type","shape","exec_cycles")) {
            next
         }
-        values <- as.character(prof_data[match(fragment_tasks, prof_data$task),annot])
+        temp <- prof_data[match(fragment_tasks, prof_data$task),annot]
+        if (is.numeric(temp)) {
+            values <- as.numeric(temp)
+        } else if (is.logical(temp)) {
+            values <- as.logical(temp)
+        } else {
+            values <- as.character(temp)
+        }
         grain_graph <- set.vertex.attribute(grain_graph, name=annot, index=fragment_index, value=values)
     }
 
@@ -646,7 +653,14 @@ if (cl_args$unreduced) {
 
     # Set annotations
     for (annot in colnames(prof_data)) {
-        values <- as.character(prof_data[,annot])
+        temp <- prof_data[,annot]
+        if (is.numeric(temp)) {
+            values <- as.numeric(temp)
+        } else if (is.logical(temp)) {
+            values <- as.logical(temp)
+        } else {
+            values <- as.character(temp)
+        }
         grain_graph <- set.vertex.attribute(grain_graph, name=annot, index=task_index, value=values)
     }
 }
