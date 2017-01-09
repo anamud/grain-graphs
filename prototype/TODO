@@ -1,0 +1,20 @@
+# Plotting
+- Unreduced graph for-loop programs
+- Automatic detection of task and for-loop based program data
+- Aggregation and filtering
+- Multiple encodings for grain size and color
+
+# Testing
+- Add test data from well-known programs
+- Automated tests for graph structure and annotation soundness
+
+# Documentation
+- Create GitHub wiki
+- Describe input data semantics
+- Describe structure, metrics, problem identification
+- Describe prototype installation
+- Walk-through diagnosis on YEd and Cytoscape
+
+# Collaborators
+- Add collaborators: PL, PJ, NR
+- Advertise for new collaborators
