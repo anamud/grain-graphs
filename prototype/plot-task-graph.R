@@ -649,13 +649,6 @@ if (cl_args$unreduced) {
         values <- as.character(prof_data[,annot])
         grain_graph <- set.vertex.attribute(grain_graph, name=annot, index=task_index, value=values)
     }
-
-    # TODO: Map task size linearly based on "ins_count", "work_cycles", "overhead_cycles", "exec_cycles"
-    # TODO: Map task color linearly based on "mem_fp", "-compute_int", "PAPI_RES_STL_sum", "-mem_hier_util", "work_deviation", "overhead_deviation", "-parallel_benefit", "-inst_par_median", "-inst_par_max","-inst_par_min", "sibling_work_balance"
-    # "-" higher is better
-    # TODO: Map task color linearly based on "sibling_scatter" for task-based profiling data
-    # TODO: Map task color linearly based on "chunk_work_balance", "chunk_work_cpu_balance" for for-loop based profiling data
-    # TODO: Map task color using linear-step mapping for "cpu_id", "outl_func", "tag", "outline_function"
 }
 
 # Set attributes of start grain
