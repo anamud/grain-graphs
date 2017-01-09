@@ -848,6 +848,13 @@ if (cl_args$unreduced) {
     # Get task of fragment
     overlaps$task <- as.integer(overlaps$fragment)
     overlaps_agg <- overlaps[, j=list(inst_par_median = as.numeric(median(count, na.rm = TRUE)), inst_par_min = as.numeric(min(count, na.rm = TRUE)), inst_par_max = as.numeric(max(count, na.rm = TRUE))), by=list(task)]
+    overlaps_agg <- as.data.frame(overlaps_agg)
+
+    # Write to graph
+    for (annot in c("inst_par_median", "inst_par_min", "inst_par_max")) {
+        values <- as.numeric(overlaps_agg[match(fragment_tasks, overlaps_agg$task),annot])
+        grain_graph <- set.vertex.attribute(grain_graph, name=annot, index=fragment_index, value=values)
+    }
 
     # Write per task contribution to instantaneous parallelism to file
     temp_out_file <- paste(gsub(". $", "", cl_args$out), "-instantaneous-parallelism-contribution.csv", sep="")
