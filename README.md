@@ -6,7 +6,7 @@ See the [wiki](https://github.com/anamud/grain-graphs/wiki) for documentation ab
 
 ## Citation
 
-If you use grain graphs in your work, please cite the debut publication:
+If you use grain graphs in your work, please cite the debut [paper](http://dl.acm.org/citation.cfm?id=2851156):
 
     Muddukrishna, Ananya, P. A. Jonsson, A. Podobas, and M. Brorsson,
     "Grain Graphs: OpenMP Performance Analysis Made Easy," in
