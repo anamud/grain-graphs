@@ -764,6 +764,8 @@ if (!cl_args$enumcriticalpath) {
     grain_graph <- set.edge.attribute(grain_graph, name="on_crit_path", index=critical_edges, value=1)
     grain_graph <- set.edge.attribute(grain_graph, name="color", index=critical_edges, value="#FF0000")
     grain_graph <- set.vertex.attribute(grain_graph, name="border-color", index=critical_nodes, value="#FF0000")
+    # Cleanup
+    grain_graph <- remove.vertex.attribute(grain_graph,"root_path")
     if (cl_args$verbose) {
         ctr <- ctr + 1
         setTxtProgressBar(progress_bar, ctr)
@@ -966,7 +968,6 @@ if (cl_args$layout) {
 ## Write dot file
 #if (cl_args$timing) tic(type="elapsed")
 #temp_out_file <- paste(gsub(". $", "", cl_args$out), ".dot", sep="")
-#grain_graph <- remove.vertex.attribute(grain_graph,"root_path")
 #res <- write.graph(grain_graph, file=temp_out_file, format="dot")
 #my_print(paste("Wrote file:", temp_out_file))
 #if (cl_args$timing) toc("Write dot")
