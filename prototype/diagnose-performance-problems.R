@@ -55,6 +55,7 @@ if (!("task" %in% colnames(task_data))) {
     quit("no", 1)
 }
 task_data[task_data == "NA"] <- NA
+is.na(task_data) <- is.na(task_data)
 task_data <- subset(task_data, !is.na(task))
 
 # Dim elements
