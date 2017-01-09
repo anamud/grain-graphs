@@ -18,7 +18,7 @@ group_size <- 50
 # Read arguments
 Rstudio_mode <- F
 if (Rstudio_mode) {
-  parsed <- list(data="task-stats.processed",
+  cl_args <- list(data="task-stats.processed",
                  graph="task-graph.graphml",
                  verbose=T,
                  timing=F,
@@ -27,32 +27,32 @@ if (Rstudio_mode) {
 } else {
   option_list <- list(
     make_option(c("-d","--data"), help = "Processed task stats.", metavar="FILE"),
-    make_option(c("--graph"), help = "Task graph (GRAPHML).", metavar="FILE"), # Cannot add -g as option since it is parsed by Rscript as "gui" option
+    make_option(c("--graph"), help = "Task graph (GRAPHML).", metavar="FILE"), # Cannot add -g as option since it is cl_args by Rscript as "gui" option
     make_option(c("--verbose"), action="store_true", default=TRUE, help="Print output [default]."),
     make_option(c("--timing"), action="store_true", default=FALSE, help="Print timing information."),
     make_option(c("--outdata"), default="task-stats.aggregated", help = "Task stats output file name [default \"%default\"]", metavar="STRING"),
     make_option(c("--outgraph"), default="task-graph-aggregated.graphml", help = "Task graph output file name [default \"%default\"]", metavar="STRING"),
     make_option(c("--quiet"), action="store_false", dest="verbose", help="Print little output."))
 
-  parsed <- parse_args(OptionParser(option_list = option_list), args = commandArgs(TRUE))
+  cl_args <- parse_args(OptionParser(option_list = option_list), args = commandArgs(TRUE))
 
-  if (!exists("data", where=parsed)) {
+  if (!exists("data", where=cl_args)) {
     my_print("Error: Invalid arguments. Check help (-h).")
     quit("no", 1)
   }
-  if (!exists("graph", where=parsed)) {
+  if (!exists("graph", where=cl_args)) {
     my_print("Error: Invalid arguments. Check help (-h).")
     quit("no", 1)
   }
 }
 
 # Read data
-if (parsed$verbose) my_print(paste("Reading file", parsed$data))
-d <- read.csv(parsed$data, header=TRUE, comment.char='#', na.strings="NA")
+if (cl_args$verbose) my_print(paste("Reading file", cl_args$data))
+d <- read.csv(cl_args$data, header=TRUE, comment.char='#', na.strings="NA")
 
 # Read graph
-if (parsed$verbose) my_print(paste("Reading file", parsed$graph))
-g <-xmlParse(parsed$graph)
+if (cl_args$verbose) my_print(paste("Reading file", cl_args$graph))
+g <-xmlParse(cl_args$graph)
 
 # Graph variables
 # Namespace
@@ -121,13 +121,13 @@ d$group_type <- "task"
 # 6. Assign unique ID, accumulate attributes and performance of group members sensibly, and add as leaf task.
 # 7. Repeat 1-6 until all tasks except the first implicit task are grouped.
 
-if (parsed$verbose) my_print("Aggregating ...")
+if (cl_args$verbose) my_print("Aggregating ...")
 
 itr_count <- 0
 while(any(!d$grouped))
 {
   itr_count  <- itr_count + 1
-  if (parsed$verbose) my_print(paste("In grouping iteration", itr_count))
+  if (cl_args$verbose) my_print(paste("In grouping iteration", itr_count))
 
   # Break out if only first implicit task is ungrouped.
   ungrouped <- which(!d$grouped)
@@ -135,14 +135,14 @@ while(any(!d$grouped))
   {
     if(d[ungrouped,]$parent == 0)
     {
-      if (parsed$verbose) my_print("Only implicit task is ungrouped. Stopping.")
+      if (cl_args$verbose) my_print("Only implicit task is ungrouped. Stopping.")
       break
     }
   }
 
   # Group leaf siblings.
-  #if (parsed$verbose) my_print("Grouping leaf siblings ...")
-  if (parsed$timing) tic(type="elapsed")
+  #if (cl_args$verbose) my_print("Grouping leaf siblings ...")
+  if (cl_args$timing) tic(type="elapsed")
 
   # Mark leaf siblings.
   e0 <- d %>% group_by(parent, joins_at) %>% filter(leaf == T & grouped == F)
@@ -236,11 +236,11 @@ while(any(!d$grouped))
   # Garbage collect
   invisible(gc(reset=T))
 
-  if (parsed$timing) toc("Grouping leaf siblings:")
+  if (cl_args$timing) toc("Grouping leaf siblings:")
 
   # Group families.
-  #if (parsed$verbose) my_print("Grouping families ...")
-  if (parsed$timing) tic(type="elapsed")
+  #if (cl_args$verbose) my_print("Grouping families ...")
+  if (cl_args$timing) tic(type="elapsed")
 
   # Mark groups that completely contain children.
   #... TODO: Pick the first instead of maximum child_number.
@@ -343,11 +343,11 @@ while(any(!d$grouped))
   # Garbage collect
   invisible(gc(reset=T))
 
-  if (parsed$timing) toc("Grouping families:")
+  if (cl_args$timing) toc("Grouping families:")
 }
 
-#if (parsed$verbose) my_print("Post-grouping processes ...")
-if (parsed$timing) tic(type="elapsed")
+#if (cl_args$verbose) my_print("Post-grouping processes ...")
+if (cl_args$timing) tic(type="elapsed")
 
 # Explicitly mark groups for covnenience.
 d$group <- ifelse(d$task > max_task_id, T, F)
@@ -397,22 +397,22 @@ graph_wrapper <- append.xmlNode(graph_wrapper, top_graph)
 rm(top_graph)
 invisible(gc(reset=T))
 
-if (parsed$timing) toc("Post-grouping processes:")
+if (cl_args$timing) toc("Post-grouping processes:")
 
 # Write out aggregated data
-if (parsed$verbose) my_print("Writing aggregated data ...")
-if (parsed$timing) tic(type="elapsed")
+if (cl_args$verbose) my_print("Writing aggregated data ...")
+if (cl_args$timing) tic(type="elapsed")
 
-out_file <- parsed$outdata
+out_file <- cl_args$outdata
 sink(out_file)
 write.csv(d, out_file, row.names=F)
 sink()
 my_print(paste("Wrote file:", out_file))
-out_file <- parsed$outgraph
+out_file <- cl_args$outgraph
 junk <- saveXML(graph_wrapper, out_file)
 my_print(paste("Wrote file:", out_file))
 
-if (parsed$timing) toc("Writing aggregated data:")
+if (cl_args$timing) toc("Writing aggregated data:")
 
 # Warn
 wa <- warnings()
