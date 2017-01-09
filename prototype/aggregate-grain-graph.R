@@ -1,16 +1,15 @@
-# Clear workspace
+#
+# Setup
+#
+
+# Clean slate
 rm(list=ls())
 
-# Treat warnings as errors
-options(warn=2)
+# Include support functions
+mir_root <- Sys.getenv("GRAIN_GRAPHS_ROOT")
+source(paste(mir_root,"/prototype/common.R",sep=""))
 
 # Import
-mir_root <- Sys.getenv("MIR_ROOT")
-source(paste(mir_root,"/scripts/profiling/task/common.R",sep=""))
-
-# Import
-library(optparse, quietly=TRUE)
-suppressMessages(library(dplyr))
 library(XML)
 
 # Group size
