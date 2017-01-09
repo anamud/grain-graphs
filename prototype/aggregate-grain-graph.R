@@ -307,7 +307,7 @@ while(any(!d$grouped))
                                    xmlNode("data", attrs = c("key" = "v_task"), as.character(fi_task)),
                                    xmlNode("data", attrs = c("key" = "v_parent"), as.character(f[i,]$parent)),
                                    xmlNode("data", attrs = c("key" = "v_joins_at"), as.character(f[i,]$joins_at)),
-                                   xmlNode("data", attrs = c("key" = "v_work_cycles"), as.character(e[i,]$work_cycles)),
+                                   xmlNode("data", attrs = c("key" = "v_work_cycles"), as.character(f[i,]$work_cycles)),
                                    xmlNode("data", attrs = c("key" = "v_size"), as.character(group_size)),
                                    xmlNode("data", attrs = c("key" = "v_width"), as.character(group_size)),
                                    xmlNode("data", attrs = c("key" = "v_height"), as.character(group_size)),
