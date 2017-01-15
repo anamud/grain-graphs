@@ -624,6 +624,12 @@ if (cl_args$unreduced) {
             my_print(paste("Error: Cannot map edge weight to", common_edge_weight[1], ". Available mapping options are: exec_cyles."))
             quit("no", 1)
         } else {
+            if (cl_args$verbose) {
+                my_print("[subprocess] Setting edge weight attribute ...")
+                num_vertices <- length(V(grain_graph))
+                progress_bar <- txtProgressBar(min = 0, max = num_vertices, style = 3)
+                ctr <- 0
+            }
             top_sort_graph <- topological.sort(grain_graph)
             for(node in top_sort_graph[-1])
             {
@@ -631,6 +637,13 @@ if (cl_args$unreduced) {
                 incident_edge_vertices <- get.edges(grain_graph, incident_edges)
                 incident_edge_weights <- V(grain_graph)[incident_edge_vertices[,1]]$exec_cycles
                 grain_graph <- set.edge.attribute(grain_graph, name="weight", index=incident_edges, value=incident_edge_weights)
+                if (cl_args$verbose) {
+                    ctr <- ctr + 1
+                    setTxtProgressBar(progress_bar, ctr)
+                }
+            }
+            if (cl_args$verbose) {
+                close(progress_bar)
             }
         }
     } else {
