@@ -6,11 +6,11 @@
 rm(list=ls())
 
 # Include support functions
-mir_root <- Sys.getenv("GRAIN_GRAPHS_ROOT")
-source(paste(mir_root,"/prototype/common.R", sep=""))
+grain_graphs_root_dir <- Sys.getenv("GRAIN_GRAPHS_ROOT")
+source(paste(grain_graphs_root_dir,"/prototype/common.R", sep=""))
 
 # Default configs
-config_dir <- paste(mir_root, "/prototype/configs", sep="")
+config_dir <- paste(grain_graphs_root_dir, "/prototype/configs", sep="")
 
 # Parse args
 Rstudio_mode <- F
