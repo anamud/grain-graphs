@@ -919,7 +919,11 @@ if (!(cl_args$unreduced)) {
 
     # Set color
     if (!is.na(task_color[2])) {
-        temp <- apply_task_color_mapping(as.numeric(prof_data[,task_color[1]]), task_color[2], paste("task-", task_color[1], "-", task_color[2], ".colormap", sep=""))
+        temp0 <- prof_data[,task_color[1]]
+        if (!is.numeric(temp0) & !is.logical(temp0)) {
+            temp0 <- as.character(temp0)
+        }
+        temp <- apply_task_color_mapping(temp0, task_color[2], paste("task-", task_color[1], "-", task_color[2], ".colormap", sep=""))
         grain_graph <- set.vertex.attribute(grain_graph, name="color", index=task_index, value=temp)
     } else {
         grain_graph <- set.vertex.attribute(grain_graph, name="color", index=task_index, value=task_color[1])
