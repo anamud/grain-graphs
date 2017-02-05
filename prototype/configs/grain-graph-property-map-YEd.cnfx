@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <styles>
-  <style name="TG shape" scope="node" selectionOnly="false">
+  <style name="GG shape" scope="node" selectionOnly="false">
     <mapping>
       <source name="shape" origin="customProperty" type="string"/>
       <target name="template" type="nodeTemplate">
@@ -84,7 +84,7 @@
       </conversion>
     </mapping>
   </style>
-  <style name="TG generic" scope="node" selectionOnly="false">
+  <style name="GG generic" scope="node" selectionOnly="false">
     <mapping>
       <source name="width" origin="customProperty" type="string"/>
       <target name="geometryWidth" type="double">
@@ -114,7 +114,7 @@
       <conversion type="asIs"/>
     </mapping>
   </style>
-  <style name="TG generic" scope="edge" selectionOnly="false">
+  <style name="GG generic" scope="edge" selectionOnly="false">
     <mapping>
       <source name="color" origin="customProperty" type="string"/>
       <target name="lineColor" type="color">
