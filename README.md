@@ -1,6 +1,6 @@
 # Grain Graphs
 
-Grain graphs is a performance visualization method for OpenMP programs. Grain graphs visualize *grains* – computation performed by a task or a parallel for-loop chunk instance – and highlight problems such as low parallelism, work inflation, and poor parallelization benefit at the grain level.
+Grain graphs is a visualization method for OpenMP that connects performance problems to the fork-join program structure at the resolution of \textit{grains} -- task and parallel for-loop chunk instances created during execution. Grains that suffer problems such as low parallelism, work inflation, and poor parallelization benefit are pinpointed on grain graphs. Since programmers readily identify with the fork-join program structure in terms of grains, problem diagnosis is simplified. In contrast, existing visualizations complicate diagnosis by resolving performance problems from a runtime system or threads perspective that is unfamiliar and unpredictable to programmers.
 
 ![](https://github.com/anamud/grain-graphs/wiki/figures/bots-sort-analysis.gif)
 
