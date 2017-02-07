@@ -4,7 +4,7 @@ Grain graphs is a visualization method for OpenMP that connects performance prob
 
 ![](https://github.com/anamud/grain-graphs/wiki/figures/bots-sort-analysis.gif "Click image to zoom-in")
 
-See the [wiki](https://github.com/anamud/grain-graphs/wiki) for detailed documentation about structure and utility of grain graphs, including usage of prototype implementations.
+See the [wiki](https://github.com/anamud/grain-graphs/wiki) for documentation about structure and utility of grain graphs, including usage of prototype implementations.
 
 ## Citation
 
