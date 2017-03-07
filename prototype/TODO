@@ -9,12 +9,9 @@
 - Automated tests for graph structure and annotation soundness
 
 # Documentation
-- Create GitHub wiki
-- Describe input data semantics
 - Describe structure, metrics, problem identification
 - Describe prototype installation
 - Walk-through diagnosis on YEd and Cytoscape
 
 # Collaborators
-- Add collaborators: PL, PJ, NR
 - Advertise for new collaborators
