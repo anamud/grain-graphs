@@ -31,7 +31,7 @@ if (Rstudio_mode) {
                         make_option(c("-o","--out"), default="grain-graph", help = "Output file prefix [default \"%default\"].", metavar="STRING"),
                         make_option(c("--enumcriticalpath"), action="store_true", default=FALSE, help="Enumerate nodes on critical path."),
                         make_option(c("--forloop"), action="store_true", default=FALSE, help="Task profiling data obtained from a for-loop program."),
-                        make_option(c("--unreduced"), action="store_true", default=FALSE, help="Plot unreduced graph (with fragments)"),
+                        make_option(c("--unreduced"), action="store_true", default=FALSE, help="Plot unreduced graph (with fragments). Calculate instantaneous parallelism if --enumcritical path is set."),
                         make_option(c("--overlap"), default="any", help = "Overlap type for instantaneous parallelism calculation. Choices: any, within. [default \"%default\"].", metavar="STRING"),
                         make_option(c("--layout"), action="store_true", default=FALSE, help="Layout using Sugiyama style and plot to PDF."),
                         make_option(c("--verbose"), action="store_true", default=TRUE, help="Print output [default]."),
