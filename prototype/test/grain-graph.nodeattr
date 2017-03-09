@@ -1,0 +1,17 @@
+"name","label","shape","type","task","parent","joins_at","cpu_id","child_number","num_children","exec_cycles","creation_cycles","overhead_cycles","queue_size","create_instant","exec_end_instant","tag","metadata","outline_function","wait_instants","leaf","work_cycles","last_to_finish","parent_overhead_cycles","sync_cycles_per_child","parallel_benefit","sibling_work_balance","sibling_scatter","color","width","height","root_dist","depth","on_crit_path","border-color"
+"E","E","E","rectangle","end",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,"#DEB887","15",15,39142,13,1,"#FF0000"
+"j.0.0","j.0.0","*","circle","join",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,"#FF7F50","10",10,39142,12,1,"#FF0000"
+"j.1.0","j.1.0","*","circle","join",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,"#FF7F50","10",10,39142,11,1,"#FF0000"
+"j.2.0","j.2.0","*","circle","join",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,"#FF7F50","10",10,39142,10,1,"#FF0000"
+"j.3.0","j.3.0","*","circle","join",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,"#FF7F50","10",10,39142,9,1,"#FF0000"
+"f.0.0","f.0.0","^","circle","fork",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,"#2E8B57","10",10,0,1,1,"#FF0000"
+"f.1.0","f.1.0","^","circle","fork",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,"#2E8B57","10",10,20584,3,1,"#FF0000"
+"f.2.0","f.2.0","^","circle","fork",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,"#2E8B57","10",10,29788,5,1,"#FF0000"
+"f.3.0","f.3.0","^","circle","fork",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,"#2E8B57","10",10,38914,7,1,"#FF0000"
+"0","0","S","rectangle","start",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,"#DEB887","15",15,0,0,1,"#FF0000"
+"1","1","1","rectangle","task",1,0,0,0,1,1,20584,15880,8360,0,0,27847752,"GOMP_parallel_task",NA,4203733,"[0;19180]",FALSE,12224,TRUE,NA,NA,NA,1,NA,"#4C00FFFF","30",300,0,2,1,"#FF0000"
+"2","2","2","rectangle","task",2,1,0,0,1,2,9204,4820,6672,0,14242,27845952,"0x7ffd002be738",NA,4203829,"[0;8626]",FALSE,2532,FALSE,8360,3540,0.302870813397129,1,NA,"#4C00FFFF","30",150,20584,4,1,"#FF0000"
+"3","3","3","rectangle","task",3,2,0,0,1,2,9126,4352,6986,0,5146,27844892,"0x7ffd002be5d8",NA,4203591,"[0;8428]",FALSE,2140,FALSE,6672,400,0.4503367003367,1.5946348733234,0,"#4C00FFFF","30",150,29788,6,1,"#FF0000"
+"4","4","4","rectangle","task",4,2,0,0,2,0,544,1520,0,1,7288,27833628,"0x7ffd002be5d8",NA,4203662,"[0]",TRUE,544,FALSE,6672,400,0.283333333333333,1.5946348733234,0,"#4C00FFFF","30",30,29788,6,0,NA
+"5","5","5","rectangle","task",5,3,0,0,1,0,228,4552,0,0,5020,27843744,"0x7ffd002be468",NA,4203591,"[0]",TRUE,228,FALSE,6986,372,0.0463038180341186,1.25274725274725,0,"#4C00FFFF","30",30,38914,8,1,"#FF0000"
+"6","6","6","rectangle","task",6,3,0,0,2,0,136,1690,0,1,7270,27842592,"0x7ffd002be468",NA,4203662,"[0]",TRUE,136,FALSE,6986,372,0.0659553831231814,1.25274725274725,0,"#4C00FFFF","30",30,38914,8,0,NA
