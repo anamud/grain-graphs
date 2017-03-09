@@ -1,4 +1,0 @@
-# Problems
-5 grains have !is.na(parallel_benefit) & parallel_benefit < 1,  3 of which are on the critical path.
-0 grains have !is.na(sibling_work_balance) & sibling_work_balance > 2,  0 of which are on the critical path.
-0 grains have !is.na(sibling_scatter) & sibling_scatter > length(unique(task_data$cpu_id))/4,  0 of which are on the critical path.
