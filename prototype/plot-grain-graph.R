@@ -806,7 +806,7 @@ if (!cl_args$enumcriticalpath) {
 
 if (cl_args$timing) toc("Calculating critical path")
 
-if (cl_args$unreduced) {
+if (cl_args$enumcriticalpath && cl_args$unreduced) {
     #
     # Calculate instantaneous parellelism
     # Note: Instantaneous parallelism is found by counting overlapping ranges.
