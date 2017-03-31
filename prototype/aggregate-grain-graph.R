@@ -44,14 +44,14 @@ if (cl_args$verbose) my_print(paste("Reading", cl_args$graph, "..."))
 
 # Read data from graph
 g_graphml <- read.graph(cl_args$graph, format="graphml")
-d <- get.data.frame(g_graphml, what="vertices")
+g_data <- get.data.frame(g_graphml, what="vertices")
 if (!("task" %in% colnames(g_data))) {
     my_print("Error: Graph does not have task annotation. Aborting!")
     quit("no", 1)
 }
-d[d == "NA"] <- NA
-is.na(d) <- is.na(d)
-d <- subset(d, !is.na(task))
+g_data[g_data == "NA"] <- NA
+is.na(g_data) <- is.na(g_data)
+g_data <- subset(g_data, !is.na(task))
 
 # Read graph as XML
 g <-xmlParse(cl_args$graph)
@@ -92,7 +92,7 @@ group_ids_names <- data.frame(id = character(0), name = character(0))
 # Counter to create unique group IDs.
 # Starts at max_task_id + 1
 # Note: <<- is a scoping assignment allowing the function to maintain state.
-max_task_id <- max(d$task)
+max_task_id <- max(g_data$task)
 get_group_id = (function(){gid = max_task_id; function() gid <<- gid + 1 })()
 
 # Set group variables.
@@ -100,15 +100,15 @@ get_group_id = (function(){gid = max_task_id; function() gid <<- gid + 1 })()
 # Each task belongs to its own group inititally.
 # During aggregation, tasks are nested under explicitly created groups.
 # A group is also added as a task.
-d$group_id <- d$task
+g_data$group_id <- g_data$task
 # Indicates if the task is a member of (i.e., nested immediately under) an explicit group
-d$grouped <- F
+g_data$grouped <- F
 # The number of tasks nested the group.
-d$strength <- 1
+g_data$strength <- 1
 # The number of tasks nested *immediately* under the group.
-d$own_strength <- 1
+g_data$own_strength <- 1
 # Group types: task, sibling, family
-d$group_type <- "task"
+g_data$group_type <- "task"
 
 # Rough sketch of iterative algorithm for grouping.
 # 1. Mark all leaf siblings.
@@ -126,16 +126,16 @@ d$group_type <- "task"
 if (cl_args$verbose) my_print("Aggregating ...")
 
 itr_count <- 0
-while(any(!d$grouped))
+while(any(!g_data$grouped))
 {
   itr_count  <- itr_count + 1
   if (cl_args$verbose) my_print(paste("In grouping iteration", itr_count))
 
   # Break out if only first implicit task is ungrouped.
-  ungrouped <- which(!d$grouped)
+  ungrouped <- which(!g_data$grouped)
   if(length(ungrouped) == 1)
   {
-    if(d[ungrouped,]$parent == 0)
+    if(g_data[ungrouped,]$parent == 0)
     {
       if (cl_args$verbose) my_print("Only implicit task is ungrouped. Stopping.")
       break
@@ -147,7 +147,7 @@ while(any(!d$grouped))
   if (cl_args$timing) tic(type="elapsed")
 
   # Mark leaf siblings.
-  e0 <- d %>% group_by(parent, joins_at) %>% filter(leaf == T & grouped == F)
+  e0 <- g_data %>% group_by(parent, joins_at) %>% filter(leaf == T & grouped == F)
   # Group and compute aggregated attributes.
   #... Group has same parent and join parent as members.
   #... Assiging unique ID row-wise is essential else inconsistent results.
@@ -170,17 +170,17 @@ while(any(!d$grouped))
     # Update members attributes.
     #e1 <- e0 %>% filter(parent == e[i,]$'parent' & joins_at == e[i,]$'joins_at') %>% select(task, parent, joins_at)
     e1 <- subset(e0, parent == ei_parent & joins_at == ei_joins_at)
-    matches <- which(d$task %in% e1$task)
-    d[matches, ]$group_id <- ei_task
-    d[matches, ]$grouped <- T
+    matches <- which(g_data$task %in% e1$task)
+    g_data[matches, ]$group_id <- ei_task
+    g_data[matches, ]$grouped <- T
 
     # Update group attributes.
     e[i,]$group_id <- ei_task
     # Save parent's child count for use during family grouping.
-    match <- which(d$task == ei_parent)
+    match <- which(g_data$task == ei_parent)
     stopifnot(length(match) == 1)
     # Using child_number as a placeholder for number of children of parent
-    e[i,]$child_number <- d[match,]$num_children
+    e[i,]$child_number <- g_data[match,]$num_children
 
     # Add group node to graph
     # Create new group node
@@ -233,7 +233,7 @@ while(any(!d$grouped))
   }
 
   # Add leaf sibling groups as tasks.
-  d <- bind_rows(d, e)
+  g_data <- bind_rows(g_data, e)
 
   # Garbage collect
   invisible(gc(reset=T))
@@ -247,7 +247,7 @@ while(any(!d$grouped))
   # Mark groups that completely contain children.
   #... TODO: Pick the first instead of maximum child_number.
   #... ... All child_numbers are the same since they are proxies for child count of parent.
-  f <- d %>% group_by(parent) %>% filter(task > max_task_id & grouped == F) %>% summarize(strength = sum(strength), own_strength = sum(own_strength), num_groups = n(), work_cycles = sum(as.numeric(work_cycles)), child_number = max(child_number), leaf = T, group_id = NA, grouped = F) %>% filter(own_strength == child_number)
+  f <- g_data %>% group_by(parent) %>% filter(task > max_task_id & grouped == F) %>% summarize(strength = sum(strength), own_strength = sum(own_strength), num_groups = n(), work_cycles = sum(as.numeric(work_cycles)), child_number = max(child_number), leaf = T, group_id = NA, grouped = F) %>% filter(own_strength == child_number)
   stopifnot(nrow(f) > 0)
   f$task <- NA
   f$joins_at <- NA
@@ -269,33 +269,33 @@ while(any(!d$grouped))
 
     # Update member attributes.
     # Update parent member attributes.
-    match <- which(d$task == f[i,]$parent)
+    match <- which(g_data$task == f[i,]$parent)
     stopifnot(length(match) == 1)
 
-    d[match, ]$group_id <- fi_task
-    d[match, ]$grouped <- T
+    g_data[match, ]$group_id <- fi_task
+    g_data[match, ]$grouped <- T
 
     # Update group attributes.
-    f[i,]$joins_at <- d[match,]$joins_at
+    f[i,]$joins_at <- g_data[match,]$joins_at
     temp <- f[i,]$parent
-    f[i,]$parent <- d[match,]$parent
-    f[i,]$work_cycles <- as.numeric(f[i,]$work_cycles) + as.numeric(d[match,]$work_cycles)
-    f[i,]$child_number <- d[match,]$num_children
-    f[i,]$strength <-  f[i,]$strength + d[match,]$strength
+    f[i,]$parent <- g_data[match,]$parent
+    f[i,]$work_cycles <- as.numeric(f[i,]$work_cycles) + as.numeric(g_data[match,]$work_cycles)
+    f[i,]$child_number <- g_data[match,]$num_children
+    f[i,]$strength <-  f[i,]$strength + g_data[match,]$strength
 
     # Update child member attributes.
-    matches <- which(d$parent == temp & d$task > max_task_id & d$grouped == F)
+    matches <- which(g_data$parent == temp & g_data$task > max_task_id & g_data$grouped == F)
     stopifnot(length(matches) > 0)
 
-    d[matches, ]$group_id <- fi_task
-    d[matches, ]$grouped <- T
+    g_data[matches, ]$group_id <- fi_task
+    g_data[matches, ]$grouped <- T
 
     # Add group node to graph
     # Create new group node
     new_group <- xmlNode("graph", attrs = c("id" = paste("g", as.character(fi_task), sep = ""),
                                             "edgedefault" = "directed"))
     # Add nodes of members as children
-    children <- as.character(c(d[matches,]$task, d[match,]$task))
+    children <- as.character(c(g_data[matches,]$task, g_data[match,]$task))
     member_nodes <- which(node_ids_names$name %in% children)
     new_group <- append.xmlNode(new_group, lapply(member_nodes, function(member_node) nodes_xml[[member_node]]))
     member_groups <- which(group_ids_names$name %in% children)
@@ -340,7 +340,7 @@ while(any(!d$grouped))
   }
 
   # Add families as tasks.
-  d <- bind_rows(d, f %>% select(-num_groups))
+  g_data <- bind_rows(g_data, f %>% select(-num_groups))
 
   # Garbage collect
   invisible(gc(reset=T))
@@ -352,7 +352,7 @@ while(any(!d$grouped))
 if (cl_args$timing) tic(type="elapsed")
 
 # Explicitly mark groups for covnenience.
-d$group <- ifelse(d$task > max_task_id, T, F)
+g_data$group <- ifelse(g_data$task > max_task_id, T, F)
 
 # Add graphml wrappers to graph
 graph_wrapper <- xmlNode("graphml", attrs = c("xmlns" = "http://graphml.graphdrawing.org/xmlns",
@@ -407,7 +407,7 @@ if (cl_args$timing) tic(type="elapsed")
 
 out_file <- cl_args$outdata
 sink(out_file)
-write.csv(d, out_file, row.names=F)
+write.csv(g_data, out_file, row.names=F)
 sink()
 my_print(paste("Wrote file:", out_file))
 
@@ -418,6 +418,6 @@ my_print(paste("Wrote file:", out_file))
 if (cl_args$timing) toc("Write aggregated data")
 
 # Warn
-wa <- warnings()
-if (class(wa) != "NULL")
-  print(wa)
+w <- warnings()
+if (class(w) != "NULL")
+  print(w)
