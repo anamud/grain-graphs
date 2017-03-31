@@ -103,7 +103,7 @@ get_group_id = (function(){gid = max_task_id; function() gid <<- gid + 1 })()
 g_data$group_id <- g_data$task
 # Indicates if the task is a member of (i.e., nested immediately under) an explicit group
 g_data$grouped <- F
-# The number of nested the group
+# The number of task nested under the group including sub-groups
 g_data$strength <- 1
 # The number of tasks nested *immediately* under the group
 g_data$own_strength <- 1
@@ -151,8 +151,8 @@ while(any(!g_data$grouped))
   e0 <- g_data %>% group_by(parent, joins_at) %>% filter(leaf == T & grouped == F)
   # Group and compute aggregated attributes
   #... Group has same parent and join parent as members
-  #... Assiging unique ID row-wise is essential else inconsistent results
-  #... TODO: Understand why row-wise ensure consistency
+  #... Assiging unique ID row-wise is essential else we obtain inconsistent results
+  #... TODO: Understand why row-wise is required to ensure consistency
   e <- e0 %>% summarize(strength = sum(strength), own_strength = n(), work_cycles = sum(as.numeric(work_cycles)), child_number = NA, leaf = T, group_id = NA, grouped = F, group_type = "sibling") %>% rowwise() %>% mutate(task = get_group_id())
   # Ensure groups exist
   stopifnot(nrow(e) > 0)
