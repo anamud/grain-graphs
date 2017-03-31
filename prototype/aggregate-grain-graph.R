@@ -18,30 +18,24 @@ group_size <- 50
 # Read arguments
 Rstudio_mode <- F
 if (Rstudio_mode) {
-  cl_args <- list(data="task-stats.processed",
-                 graph="task-graph.graphml",
+  cl_args <- list(graph="grain-graph.graphml",
                  verbose=T,
                  timing=F,
-                 outdata="task-stats.aggregated",
-                 outgraph="task-graph-aggregated.graphml")
+                 outdata="aggregated-grain-graph-data.csv",
+                 outgraph="aggregated-grain-graph.graphml")
 } else {
   option_list <- list(
-    make_option(c("-d","--data"), help = "Processed task stats.", metavar="FILE"),
-    make_option(c("--graph"), help = "Task graph (GRAPHML).", metavar="FILE"), # Cannot add -g as option since it is parsed by Rscript as "gui" option
+    make_option(c("--graph"), help = "Grain graph (GRAPHML).", metavar="FILE"), # Cannot add -g as option since it is parsed by Rscript as "gui" option
     make_option(c("--verbose"), action="store_true", default=TRUE, help="Print output [default]."),
     make_option(c("--timing"), action="store_true", default=FALSE, help="Print timing information."),
-    make_option(c("--outdata"), default="task-stats.aggregated", help = "Task stats output file name [default \"%default\"]", metavar="STRING"),
-    make_option(c("--outgraph"), default="task-graph-aggregated.graphml", help = "Task graph output file name [default \"%default\"]", metavar="STRING"),
+    make_option(c("--outdata"), default="aggregated-grain-graph-data.csv", help = "Aggregated graph data output file [default \"%default\"]", metavar="STRING"),
+    make_option(c("--outgraph"), default="aggregated-grain-graph.graphml", help = "Aggregated graph output file [default \"%default\"]", metavar="STRING"),
     make_option(c("--quiet"), action="store_false", dest="verbose", help="Print little output."))
 
   cl_args <- parse_args(OptionParser(option_list = option_list), args = commandArgs(TRUE))
 
-  if (!exists("data", where=cl_args)) {
-    my_print("Error: Invalid arguments. Check help (-h).")
-    quit("no", 1)
-  }
   if (!exists("graph", where=cl_args)) {
-    my_print("Error: Invalid arguments. Check help (-h).")
+    my_print("Error: Graph argument missing. Check help (-h).")
     quit("no", 1)
   }
 }
