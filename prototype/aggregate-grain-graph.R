@@ -238,7 +238,7 @@ while(any(!d$grouped))
   # Garbage collect
   invisible(gc(reset=T))
 
-  if (cl_args$timing) toc("Grouping leaf siblings:")
+  if (cl_args$timing) toc("Group leaf siblings")
 
   # Group families.
   #if (cl_args$verbose) my_print("Grouping families ...")
@@ -345,7 +345,7 @@ while(any(!d$grouped))
   # Garbage collect
   invisible(gc(reset=T))
 
-  if (cl_args$timing) toc("Grouping families:")
+  if (cl_args$timing) toc("Group families")
 }
 
 #if (cl_args$verbose) my_print("Post-grouping processes ...")
@@ -399,7 +399,7 @@ graph_wrapper <- append.xmlNode(graph_wrapper, top_graph)
 rm(top_graph)
 invisible(gc(reset=T))
 
-if (cl_args$timing) toc("Post-grouping processes:")
+if (cl_args$timing) toc("Post-grouping processes")
 
 # Write out aggregated data
 if (cl_args$verbose) my_print("Writing aggregated data ...")
@@ -410,11 +410,12 @@ sink(out_file)
 write.csv(d, out_file, row.names=F)
 sink()
 my_print(paste("Wrote file:", out_file))
+
 out_file <- cl_args$outgraph
 junk <- saveXML(graph_wrapper, out_file)
 my_print(paste("Wrote file:", out_file))
 
-if (cl_args$timing) toc("Writing aggregated data:")
+if (cl_args$timing) toc("Write aggregated data")
 
 # Warn
 wa <- warnings()
