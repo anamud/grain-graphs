@@ -40,12 +40,20 @@ if (Rstudio_mode) {
   }
 }
 
-# Read data
-if (cl_args$verbose) my_print(paste("Reading file", cl_args$data))
-d <- read.csv(cl_args$data, header=TRUE, comment.char='#', na.strings="NA")
+if (cl_args$verbose) my_print(paste("Reading", cl_args$graph, "..."))
 
-# Read graph
-if (cl_args$verbose) my_print(paste("Reading file", cl_args$graph))
+# Read data from graph
+g_graphml <- read.graph(cl_args$graph, format="graphml")
+d <- get.data.frame(g_graphml, what="vertices")
+if (!("task" %in% colnames(g_data))) {
+    my_print("Error: Graph does not have task annotation. Aborting!")
+    quit("no", 1)
+}
+d[d == "NA"] <- NA
+is.na(d) <- is.na(d)
+d <- subset(d, !is.na(task))
+
+# Read graph as XML
 g <-xmlParse(cl_args$graph)
 
 # Graph variables
