@@ -65,7 +65,7 @@ key_ids <- key_ids[grep("^v_", key_ids)]
 stopifnot(length(key_ids) > 0)
 # # Initializer for key values
 # #... DO NOT USE.
-# #... yEd complains about invalid format.
+# #... yEd complains about invalid format
 # key_init <- function(attr_val) { n_n <- xmlNode("data", attrs = c("key" = attr_val), "NA"); n_n}
 # # Index for keys of interest
 # v_label_ind <- which(key_ids == "v_label")
@@ -89,39 +89,40 @@ groups_xml <-xmlNode("root")
 # Group table
 group_ids_names <- data.frame(id = character(0), name = character(0))
 
-# Counter to create unique group IDs.
+# Counter to create unique group IDs
 # Starts at max_task_id + 1
-# Note: <<- is a scoping assignment allowing the function to maintain state.
+# Note: <<- is a scoping assignment allowing the function to maintain state
 max_task_id <- max(g_data$task)
 get_group_id = (function(){gid = max_task_id; function() gid <<- gid + 1 })()
 
-# Set group variables.
-# Unique ID of the group.
-# Each task belongs to its own group inititally.
-# During aggregation, tasks are nested under explicitly created groups.
-# A group is also added as a task.
+# Set group variables
+# Unique ID of the group
+# Each task belongs to its own group inititally
+# During aggregation, tasks are nested under explicitly created groups
+# A group is also added as a task
 g_data$group_id <- g_data$task
 # Indicates if the task is a member of (i.e., nested immediately under) an explicit group
 g_data$grouped <- F
-# The number of tasks nested the group.
+# The number of nested the group
 g_data$strength <- 1
-# The number of tasks nested *immediately* under the group.
+# The number of tasks nested *immediately* under the group
 g_data$own_strength <- 1
 # Group types: task, sibling, family
+# Task means an implicit group
 g_data$group_type <- "task"
 
-# Rough sketch of iterative algorithm for grouping.
-# 1. Mark all leaf siblings.
-# ... Leaf siblings are tasks without children and sharing the same fork/join points.
-# ... Single leaf siblings are possible too.
-# ... Since groups are added as tasks, groups that share the same join point are leaf siblings too.
-# 2. Group leaf siblings, join point, fork point together (members) into a leaf sibling group.
-# 3. Assign unique id, accumulate attributes and performance of group members sensibly, and add as leaf task.
-# 4. Mark all families.
-# ... Families are headed by parents whose children completely belong to leaf sibling groups.
-# 5. Group families i.e., parent and leaf sibling groups of children together (members) into a family group.
-# 6. Assign unique ID, accumulate attributes and performance of group members sensibly, and add as leaf task.
-# 7. Repeat 1-6 until all tasks except the first implicit task are grouped.
+# Rough sketch of iterative algorithm for grouping
+# 1. Mark all leaf siblings
+# ... Leaf siblings are tasks without children and sharing the same fork/join points
+# ... Single leaf siblings are possible too
+# ... Since groups are added as tasks, groups that share the same join point are leaf siblings too
+# 2. Group leaf siblings, join point, fork point together (members) into a leaf sibling group
+# 3. Assign unique id, accumulate attributes and performance of group members sensibly, and add as leaf task
+# 4. Mark all families
+# ... Families are headed by parents whose children completely belong to leaf sibling groups
+# 5. Group families i.e., parent and leaf sibling groups of children together (members) into a family group
+# 6. Assign unique ID, accumulate attributes and performance of group members sensibly, and add as leaf task
+# 7. Repeat 1-6 until all tasks except the first implicit task are grouped
 
 if (cl_args$verbose) my_print("Aggregating ...")
 
@@ -131,7 +132,7 @@ while(any(!g_data$grouped))
   itr_count  <- itr_count + 1
   if (cl_args$verbose) my_print(paste("In grouping iteration", itr_count))
 
-  # Break out if only first implicit task is ungrouped.
+  # Break out if only first implicit task is ungrouped
   ungrouped <- which(!g_data$grouped)
   if(length(ungrouped) == 1)
   {
@@ -142,23 +143,23 @@ while(any(!g_data$grouped))
     }
   }
 
-  # Group leaf siblings.
+  # Group leaf siblings
   #if (cl_args$verbose) my_print("Grouping leaf siblings ...")
   if (cl_args$timing) tic(type="elapsed")
 
-  # Mark leaf siblings.
+  # Mark leaf siblings
   e0 <- g_data %>% group_by(parent, joins_at) %>% filter(leaf == T & grouped == F)
-  # Group and compute aggregated attributes.
-  #... Group has same parent and join parent as members.
-  #... Assiging unique ID row-wise is essential else inconsistent results.
-  #... TODO: Understand why row-wise ensure consistency.
+  # Group and compute aggregated attributes
+  #... Group has same parent and join parent as members
+  #... Assiging unique ID row-wise is essential else inconsistent results
+  #... TODO: Understand why row-wise ensure consistency
   e <- e0 %>% summarize(strength = sum(strength), own_strength = n(), work_cycles = sum(as.numeric(work_cycles)), child_number = NA, leaf = T, group_id = NA, grouped = F, group_type = "sibling") %>% rowwise() %>% mutate(task = get_group_id())
-  # Ensure groups exist.
+  # Ensure groups exist
   stopifnot(nrow(e) > 0)
 
   # For each group,
-  #... compute aggregated attributes.
-  #... mark members as grouped and update group_id.
+  #... compute aggregated attributes
+  #... mark members as grouped and update group_id
   #... FIXME: Loop is slow. Make fast!
   for(i in seq_len(nrow(e)))
   {
@@ -167,16 +168,16 @@ while(any(!g_data$grouped))
     ei_parent <- e[i,]$parent
     ei_joins_at <- e[i,]$joins_at
 
-    # Update members attributes.
+    # Update members attributes
     #e1 <- e0 %>% filter(parent == e[i,]$'parent' & joins_at == e[i,]$'joins_at') %>% select(task, parent, joins_at)
     e1 <- subset(e0, parent == ei_parent & joins_at == ei_joins_at)
     matches <- which(g_data$task %in% e1$task)
     g_data[matches, ]$group_id <- ei_task
     g_data[matches, ]$grouped <- T
 
-    # Update group attributes.
+    # Update group attributes
     e[i,]$group_id <- ei_task
-    # Save parent's child count for use during family grouping.
+    # Save parent's child count for use during family grouping
     match <- which(g_data$task == ei_parent)
     stopifnot(length(match) == 1)
     # Using child_number as a placeholder for number of children of parent
@@ -195,7 +196,7 @@ while(any(!g_data$grouped))
     new_group <- append.xmlNode(new_group, lapply(member_groups, function(member_group) groups_xml[[member_group]]))
     # Node wrapper
     node_wrapper <- xmlNode("node", attrs = c("id" = paste("g", as.character(ei_task), "n", sep = ""), "yfiles.foldertype" = "folder"))
-    # Add specific key nodes as childhren.
+    # Add specific key nodes as children
     node_wrapper <- append.xmlNode(node_wrapper,
                                   xmlNode("data", attrs = c("key" = "v_label"), as.character(ei_task)),
                                   xmlNode("data", attrs = c("key" = "v_name"), as.character(ei_task)),
@@ -219,12 +220,12 @@ while(any(!g_data$grouped))
         group_ids_names <- group_ids_names[-c(member_groups),]
         groups_xml <- removeChildren(groups_xml, kids = as.numeric(member_groups), free = T)
     }
-    # Add group as child.
+    # Add group as child
     groups_xml <- append.xmlNode(groups_xml, new_group)
     # Update table
     group_ids_names <- bind_rows(group_ids_names, data.frame(id = paste("g", as.character(ei_task), "n", sep = ""), name = as.character(ei_task)))
     # Make sure group table mirrors order in XML root
-    # TODO: Make fast.
+    # TODO: Make fast
     stopifnot(all(group_ids_names$id == as.character(lapply(xmlChildren(groups_xml), xmlGetAttr, "id"))))
 
     # Release unused nodes
@@ -232,7 +233,7 @@ while(any(!g_data$grouped))
     rm(node_wrapper)
   }
 
-  # Add leaf sibling groups as tasks.
+  # Add leaf sibling groups as tasks
   g_data <- bind_rows(g_data, e)
 
   # Garbage collect
@@ -240,13 +241,13 @@ while(any(!g_data$grouped))
 
   if (cl_args$timing) toc("Group leaf siblings")
 
-  # Group families.
+  # Group families
   #if (cl_args$verbose) my_print("Grouping families ...")
   if (cl_args$timing) tic(type="elapsed")
 
-  # Mark groups that completely contain children.
-  #... TODO: Pick the first instead of maximum child_number.
-  #... ... All child_numbers are the same since they are proxies for child count of parent.
+  # Mark groups that completely contain children
+  #... TODO: Pick the first instead of maximum child_number
+  #... ... All child_numbers are the same since they are proxies for child count of parent
   f <- g_data %>% group_by(parent) %>% filter(task > max_task_id & grouped == F) %>% summarize(strength = sum(strength), own_strength = sum(own_strength), num_groups = n(), work_cycles = sum(as.numeric(work_cycles)), child_number = max(child_number), leaf = T, group_id = NA, grouped = F) %>% filter(own_strength == child_number)
   stopifnot(nrow(f) > 0)
   f$task <- NA
@@ -254,12 +255,12 @@ while(any(!g_data$grouped))
   f$group_type <- "family"
 
   # For each group,
-  #... compute aggregated attributes.
-  #... mark members as grouped and update group_id.
+  #... compute aggregated attributes
+  #... mark members as grouped and update group_id
   #... FIXME: Loop is slow. Make fast!
   for(i in seq_len(nrow(f)))
   {
-    # Update group attributes.
+    # Update group attributes
     f[i,]$task <- get_group_id()
     f[i,]$own_strength <- f[i,]$num_groups + 1
     f[i,]$group_id <- f[i,]$task
@@ -267,15 +268,15 @@ while(any(!g_data$grouped))
     # For quick retrieval
     fi_task <-  f[i,]$task
 
-    # Update member attributes.
-    # Update parent member attributes.
+    # Update member attributes
+    # Update parent member attributes
     match <- which(g_data$task == f[i,]$parent)
     stopifnot(length(match) == 1)
 
     g_data[match, ]$group_id <- fi_task
     g_data[match, ]$grouped <- T
 
-    # Update group attributes.
+    # Update group attributes
     f[i,]$joins_at <- g_data[match,]$joins_at
     temp <- f[i,]$parent
     f[i,]$parent <- g_data[match,]$parent
@@ -283,7 +284,7 @@ while(any(!g_data$grouped))
     f[i,]$child_number <- g_data[match,]$num_children
     f[i,]$strength <-  f[i,]$strength + g_data[match,]$strength
 
-    # Update child member attributes.
+    # Update child member attributes
     matches <- which(g_data$parent == temp & g_data$task > max_task_id & g_data$grouped == F)
     stopifnot(length(matches) > 0)
 
@@ -302,7 +303,7 @@ while(any(!g_data$grouped))
     new_group <- append.xmlNode(new_group, lapply(member_groups, function(member_group) groups_xml[[member_group]]))
     # Node wrapper
     node_wrapper <- xmlNode("node", attrs = c("id" = paste("g", as.character(fi_task), "n", sep = ""), "yfiles.foldertype" = "folder"))
-    # Add specific key nodes as childhren.
+    # Add specific key nodes as children
     node_wrapper <- append.xmlNode(node_wrapper,
                                    xmlNode("data", attrs = c("key" = "v_label"), as.character(fi_task)),
                                    xmlNode("data", attrs = c("key" = "v_name"), as.character(fi_task)),
@@ -326,12 +327,12 @@ while(any(!g_data$grouped))
         group_ids_names <- group_ids_names[-c(member_groups),]
         groups_xml <- removeChildren(groups_xml, kids = as.numeric(member_groups), free = T)
     }
-    # Add group as child.
+    # Add group as child
     groups_xml <- append.xmlNode(groups_xml, new_group)
     # Update table
     group_ids_names <- bind_rows(group_ids_names, data.frame(id = paste("g", as.character(fi_task), "n", sep = ""), name = as.character(fi_task)))
     # Make sure group table mirrors order in XML root
-    # TODO: Make fast.
+    # TODO: Make fast
     stopifnot(all(group_ids_names$id == as.character(lapply(xmlChildren(groups_xml), xmlGetAttr, "id"))))
 
     # Release unused nodes
@@ -339,7 +340,7 @@ while(any(!g_data$grouped))
     rm(node_wrapper)
   }
 
-  # Add families as tasks.
+  # Add families as tasks
   g_data <- bind_rows(g_data, f %>% select(-num_groups))
 
   # Garbage collect
@@ -351,7 +352,7 @@ while(any(!g_data$grouped))
 #if (cl_args$verbose) my_print("Post-grouping processes ...")
 if (cl_args$timing) tic(type="elapsed")
 
-# Explicitly mark groups for covnenience.
+# Explicitly mark groups for covnenience
 g_data$group <- ifelse(g_data$task > max_task_id, T, F)
 
 # Add graphml wrappers to graph
