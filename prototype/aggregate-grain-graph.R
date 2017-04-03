@@ -104,9 +104,9 @@ g_data$group_id <- g_data$task
 # Indicates if the task is a member of (i.e., nested immediately under) an explicit group
 g_data$grouped <- F
 # The number of task nested under the group including sub-groups
-g_data$strength <- 1
+g_data$num_tasks <- 1
 # The number of tasks nested *immediately* under the group
-g_data$own_strength <- 1
+g_data$num_members <- 1
 # Group types: task, sibling, family
 # Task means an implicit group
 g_data$group_type <- "task"
@@ -153,7 +153,7 @@ while(any(!g_data$grouped))
   #... Group has same parent and join parent as members
   #... Assiging unique ID row-wise is essential else we obtain inconsistent results
   #... TODO: Understand why row-wise is required to ensure consistency
-  e <- e0 %>% summarize(strength = sum(strength), own_strength = n(), work_cycles = sum(as.numeric(work_cycles)), child_number = NA, leaf = T, group_id = NA, grouped = F, group_type = "sibling") %>% rowwise() %>% mutate(task = get_group_id())
+  e <- e0 %>% summarize(num_tasks = sum(num_tasks), num_members = n(), work_cycles = sum(as.numeric(work_cycles)), child_number = NA, leaf = T, group_id = NA, grouped = F, group_type = "sibling") %>% rowwise() %>% mutate(task = get_group_id())
   # Ensure groups exist
   stopifnot(nrow(e) > 0)
 
@@ -208,8 +208,8 @@ while(any(!g_data$grouped))
                                   xmlNode("data", attrs = c("key" = "v_width"), as.character(group_size)),
                                   xmlNode("data", attrs = c("key" = "v_height"), as.character(group_size)),
                                   xmlNode("data", attrs = c("key" = "v_shape"), "round rectangle"),
-                                  xmlNode("data", attrs = c("key" = "v_strength"), as.character(e[i,]$strength)),
-                                  xmlNode("data", attrs = c("key" = "v_own_strength"), as.character(e[i,]$own_strength)),
+                                  xmlNode("data", attrs = c("key" = "v_num_tasks"), as.character(e[i,]$num_tasks)),
+                                  xmlNode("data", attrs = c("key" = "v_num_members"), as.character(e[i,]$num_members)),
                                   xmlNode("data", attrs = c("key" = "v_group_size"), as.character(group_size)),
                                   xmlNode("data", attrs = c("key" = "v_group_type"), as.character(e[i,]$group_type))
                                   )
@@ -248,7 +248,7 @@ while(any(!g_data$grouped))
   # Mark groups that completely contain children
   #... TODO: Pick the first instead of maximum child_number
   #... ... All child_numbers are the same since they are proxies for child count of parent
-  f <- g_data %>% group_by(parent) %>% filter(task > max_task_id & grouped == F) %>% summarize(strength = sum(strength), own_strength = sum(own_strength), num_groups = n(), work_cycles = sum(as.numeric(work_cycles)), child_number = max(child_number), leaf = T, group_id = NA, grouped = F) %>% filter(own_strength == child_number)
+  f <- g_data %>% group_by(parent) %>% filter(task > max_task_id & grouped == F) %>% summarize(num_tasks = sum(num_tasks), num_members = sum(num_members), num_sibling_groups = n(), work_cycles = sum(as.numeric(work_cycles)), child_number = max(child_number), leaf = T, group_id = NA, grouped = F) %>% filter(num_members == child_number)
   stopifnot(nrow(f) > 0)
   f$task <- NA
   f$joins_at <- NA
@@ -262,7 +262,7 @@ while(any(!g_data$grouped))
   {
     # Update group attributes
     f[i,]$task <- get_group_id()
-    f[i,]$own_strength <- f[i,]$num_groups + 1
+    f[i,]$num_members <- f[i,]$num_sibling_groups + 1
     f[i,]$group_id <- f[i,]$task
 
     # For quick retrieval
@@ -282,7 +282,7 @@ while(any(!g_data$grouped))
     f[i,]$parent <- g_data[match,]$parent
     f[i,]$work_cycles <- as.numeric(f[i,]$work_cycles) + as.numeric(g_data[match,]$work_cycles)
     f[i,]$child_number <- g_data[match,]$num_children
-    f[i,]$strength <-  f[i,]$strength + g_data[match,]$strength
+    f[i,]$num_tasks <-  f[i,]$num_tasks + g_data[match,]$num_tasks
 
     # Update child member attributes
     matches <- which(g_data$parent == temp & g_data$task > max_task_id & g_data$grouped == F)
@@ -315,8 +315,8 @@ while(any(!g_data$grouped))
                                    xmlNode("data", attrs = c("key" = "v_width"), as.character(group_size)),
                                    xmlNode("data", attrs = c("key" = "v_height"), as.character(group_size)),
                                    xmlNode("data", attrs = c("key" = "v_shape"), "round rectangle"),
-                                   xmlNode("data", attrs = c("key" = "v_strength"), as.character(f[i,]$strength)),
-                                   xmlNode("data", attrs = c("key" = "v_own_strength"), as.character(f[i,]$own_strength)),
+                                   xmlNode("data", attrs = c("key" = "v_num_tasks"), as.character(f[i,]$num_tasks)),
+                                   xmlNode("data", attrs = c("key" = "v_num_members"), as.character(f[i,]$num_members)),
                                    xmlNode("data", attrs = c("key" = "v_group_size"), as.character(group_size)),
                                    xmlNode("data", attrs = c("key" = "v_group_type"), as.character(f[i,]$group_type))
                                    )
@@ -341,7 +341,7 @@ while(any(!g_data$grouped))
   }
 
   # Add families as tasks
-  g_data <- bind_rows(g_data, f %>% select(-num_groups))
+  g_data <- bind_rows(g_data, f %>% select(-num_sibling_groups))
 
   # Garbage collect
   invisible(gc(reset=T))
@@ -364,16 +364,16 @@ graph_wrapper <- append.xmlNode(graph_wrapper, xmlCommentNode("Created by MIR pr
 # Key id information
 graph_wrapper <- append.xmlNode(graph_wrapper, getNodeSet(g, "//graphml:key", namespaces = ns))
 # Group specific keys
-kn_strength <- xmlNode("key", attrs = c("id" = "v_strength",
+kn_num_tasks <- xmlNode("key", attrs = c("id" = "v_num_tasks",
                          "for" = "node",
-                         "attr.name" = "strength",
+                         "attr.name" = "num_tasks",
                          "attr.type" = "double"))
-graph_wrapper <- append.xmlNode(graph_wrapper, kn_strength)
-kn_own_strength <- xmlNode("key", attrs = c("id" = "v_own_strength",
+graph_wrapper <- append.xmlNode(graph_wrapper, kn_num_tasks)
+kn_num_members <- xmlNode("key", attrs = c("id" = "v_num_members",
                          "for" = "node",
-                         "attr.name" = "own_strength",
+                         "attr.name" = "num_members",
                          "attr.type" = "double"))
-graph_wrapper <- append.xmlNode(graph_wrapper, kn_own_strength)
+graph_wrapper <- append.xmlNode(graph_wrapper, kn_num_members)
 kn_group_size <- xmlNode("key", attrs = c("id" = "v_group_size",
                          "for" = "node",
                          "attr.name" = "group_size",
