@@ -13,7 +13,8 @@ source(paste(mir_root,"/prototype/common.R",sep=""))
 library(XML)
 
 # Group size
-group_size <- 50
+group_width <- 50
+group_height <- 50
 
 # Read arguments
 Rstudio_mode <- F
@@ -204,13 +205,11 @@ while(any(!g_data$grouped))
                                   xmlNode("data", attrs = c("key" = "v_parent"), as.character(ei_parent)),
                                   xmlNode("data", attrs = c("key" = "v_joins_at"), as.character(ei_joins_at)),
                                   xmlNode("data", attrs = c("key" = "v_work_cycles"), as.character(e[i,]$work_cycles)),
-                                  xmlNode("data", attrs = c("key" = "v_size"), as.character(group_size)),
-                                  xmlNode("data", attrs = c("key" = "v_width"), as.character(group_size)),
-                                  xmlNode("data", attrs = c("key" = "v_height"), as.character(group_size)),
+                                  xmlNode("data", attrs = c("key" = "v_width"), as.character(group_width)),
+                                  xmlNode("data", attrs = c("key" = "v_height"), as.character(group_height)),
                                   xmlNode("data", attrs = c("key" = "v_shape"), "round rectangle"),
                                   xmlNode("data", attrs = c("key" = "v_num_tasks"), as.character(e[i,]$num_tasks)),
                                   xmlNode("data", attrs = c("key" = "v_num_members"), as.character(e[i,]$num_members)),
-                                  xmlNode("data", attrs = c("key" = "v_group_size"), as.character(group_size)),
                                   xmlNode("data", attrs = c("key" = "v_group_type"), as.character(e[i,]$group_type))
                                   )
     new_group <- append.xmlNode(node_wrapper, new_group)
