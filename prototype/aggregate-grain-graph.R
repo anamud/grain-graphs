@@ -212,6 +212,31 @@ while(any(!g_data$grouped))
                                   xmlNode("data", attrs = c("key" = "v_num_members"), as.character(e[i,]$num_members)),
                                   xmlNode("data", attrs = c("key" = "v_group_type"), as.character(e[i,]$group_type))
                                   )
+    y_group_open <- xmlNode("y:GroupNode")
+    y_group_open <- append.xmlNode(y_group_open,
+      xmlNode("y:Geometry", attrs = c("height" = as.character(group_height), "width" = as.character(group_width))),
+      xmlNode("y:Fill", attrs = c("hasColor" = "false", "transparent" = "false")),
+      xmlNode("y:NodeLabel", attrs = c("visible" = "false")),
+      xmlNode("y:BorderStyle", attrs = c("color" = "#000000", "type" = "line", "width" = "2.0")),
+      xmlNode("y:Shape", attrs = c("type" = "roundrectangle")),
+      xmlNode("y:State", attrs = c("closed" = "false"))
+    )
+    y_group_closed <- xmlNode("y:GroupNode")
+    y_group_closed <- append.xmlNode(y_group_closed,
+      xmlNode("y:Geometry", attrs = c("height" = as.character(group_height), "width" = as.character(group_width))),
+      xmlNode("y:Fill", attrs = c("hasColor" = "false", "transparent" = "false")),
+      xmlNode("y:NodeLabel", attrs = c("visible" = "false")),
+      xmlNode("y:BorderStyle", attrs = c("color" = "#000000", "type" = "line", "width" = "2.0")),
+      xmlNode("y:Shape", attrs = c("type" = "roundrectangle")),
+      xmlNode("y:State", attrs = c("closed" = "true"))
+    )
+    y_realizers <- xmlNode("y:Realizers", attrs = c("active" = "0"))
+    y_realizers <- append.xmlNode(y_realizers, y_group_closed, y_group_open)
+    y_proxyautobounds <- xmlNode("y:ProxyAutoBoundsNode")
+    y_proxyautobounds <- append.xmlNode(y_proxyautobounds, y_realizers)
+    y_realizers_w <- xmlNode("data", attrs = c("key" ="v_group_yrealizer"))
+    y_realizers_w <- append.xmlNode(y_realizers_w, y_proxyautobounds)
+    node_wrapper <- append.xmlNode(node_wrapper, y_realizers_w)
     new_group <- append.xmlNode(node_wrapper, new_group)
     # Keep only yet to be grouped
     if(length(member_groups) > 0)
@@ -310,15 +335,38 @@ while(any(!g_data$grouped))
                                    xmlNode("data", attrs = c("key" = "v_parent"), as.character(f[i,]$parent)),
                                    xmlNode("data", attrs = c("key" = "v_joins_at"), as.character(f[i,]$joins_at)),
                                    xmlNode("data", attrs = c("key" = "v_work_cycles"), as.character(f[i,]$work_cycles)),
-                                   xmlNode("data", attrs = c("key" = "v_size"), as.character(group_size)),
-                                   xmlNode("data", attrs = c("key" = "v_width"), as.character(group_size)),
-                                   xmlNode("data", attrs = c("key" = "v_height"), as.character(group_size)),
+                                   xmlNode("data", attrs = c("key" = "v_width"), as.character(group_width)),
+                                   xmlNode("data", attrs = c("key" = "v_height"), as.character(group_height)),
                                    xmlNode("data", attrs = c("key" = "v_shape"), "round rectangle"),
                                    xmlNode("data", attrs = c("key" = "v_num_tasks"), as.character(f[i,]$num_tasks)),
                                    xmlNode("data", attrs = c("key" = "v_num_members"), as.character(f[i,]$num_members)),
-                                   xmlNode("data", attrs = c("key" = "v_group_size"), as.character(group_size)),
                                    xmlNode("data", attrs = c("key" = "v_group_type"), as.character(f[i,]$group_type))
                                    )
+    y_group_open <- xmlNode("y:GroupNode")
+    y_group_open <- append.xmlNode(y_group_open,
+      xmlNode("y:Geometry", attrs = c("height" = as.character(group_height), "width" = as.character(group_width))),
+      xmlNode("y:Fill", attrs = c("hasColor" = "false", "transparent" = "false")),
+      xmlNode("y:NodeLabel", attrs = c("visible" = "false")),
+      xmlNode("y:BorderStyle", attrs = c("color" = "#000000", "type" = "line", "width" = "2.0")),
+      xmlNode("y:Shape", attrs = c("type" = "roundrectangle")),
+      xmlNode("y:State", attrs = c("closed" = "false"))
+    )
+    y_group_closed <- xmlNode("y:GroupNode")
+    y_group_closed <- append.xmlNode(y_group_closed,
+      xmlNode("y:Geometry", attrs = c("height" = as.character(group_height), "width" = as.character(group_width))),
+      xmlNode("y:Fill", attrs = c("hasColor" = "false", "transparent" = "false")),
+      xmlNode("y:NodeLabel", attrs = c("visible" = "false")),
+      xmlNode("y:BorderStyle", attrs = c("color" = "#000000", "type" = "line", "width" = "2.0")),
+      xmlNode("y:Shape", attrs = c("type" = "roundrectangle")),
+      xmlNode("y:State", attrs = c("closed" = "true"))
+    )
+    y_realizers <- xmlNode("y:Realizers", attrs = c("active" = "0"))
+    y_realizers <- append.xmlNode(y_realizers, y_group_closed, y_group_open)
+    y_proxyautobounds <- xmlNode("y:ProxyAutoBoundsNode")
+    y_proxyautobounds <- append.xmlNode(y_proxyautobounds, y_realizers)
+    y_realizers_w <- xmlNode("data", attrs = c("key" ="v_group_yrealizer"))
+    y_realizers_w <- append.xmlNode(y_realizers_w, y_proxyautobounds)
+    node_wrapper <- append.xmlNode(node_wrapper, y_realizers_w)
     new_group <- append.xmlNode(node_wrapper, new_group)
     # Keep only yet to be grouped
     if(length(member_groups) > 0)
@@ -355,10 +403,16 @@ if (cl_args$timing) tic(type="elapsed")
 g_data$group <- ifelse(g_data$task > max_task_id, T, F)
 
 # Add graphml wrappers to graph
-graph_wrapper <- xmlNode("graphml", attrs = c("xmlns" = "http://graphml.graphdrawing.org/xmlns",
-                                              "xmlns:xsi" = "http://www.w3.org/2001/XMLSchema-instance",
-                                              "xsi:schemaLocation" = "http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd"
-                                              ))
+# Add yED specific schemas for groups
+graph_wrapper <- xmlNode("graphml", attrs = c("xmlns:java" = "http://www.yworks.com/xml/yfiles-common/1.0/java",
+                                                "xmlns:sys" = "http://www.yworks.com/xml/yfiles-common/markup/primitives/2.0",
+                                                "xmlns:x" = "http://www.yworks.com/xml/yfiles-common/markup/2.0",
+                                                "xmlns:xsi" = "http://www.w3.org/2001/XMLSchema-instance",
+                                                "xmlns:y" = "http://www.yworks.com/xml/graphml",
+                                                "xmlns:yed" = "http://www.yworks.com/xml/yed/3",
+                                                "xsi:schemaLocation" = "http://graphml.graphdrawing.org/xmlns http://www.yworks.com/xml/schema/graphml/1.1/ygraphml.xsd"
+                                                ))
+
 graph_wrapper <- append.xmlNode(graph_wrapper, xmlCommentNode("Created by MIR profiling infrastructure"))
 # Key id information
 graph_wrapper <- append.xmlNode(graph_wrapper, getNodeSet(g, "//graphml:key", namespaces = ns))
@@ -373,16 +427,15 @@ kn_num_members <- xmlNode("key", attrs = c("id" = "v_num_members",
                          "attr.name" = "num_members",
                          "attr.type" = "double"))
 graph_wrapper <- append.xmlNode(graph_wrapper, kn_num_members)
-kn_group_size <- xmlNode("key", attrs = c("id" = "v_group_size",
-                         "for" = "node",
-                         "attr.name" = "group_size",
-                         "attr.type" = "double"))
-graph_wrapper <- append.xmlNode(graph_wrapper, kn_group_size)
 kn_group_type <- xmlNode("key", attrs = c("id" = "v_group_type",
                          "for" = "node",
                          "attr.name" = "group_type",
                          "attr.type" = "string"))
 graph_wrapper <- append.xmlNode(graph_wrapper, kn_group_type)
+kn_group_yrealizer <- xmlNode("key", attrs = c("id" = "v_group_yrealizer",
+                         "for" = "node",
+                         "yfiles.type" = "nodegraphics"))
+graph_wrapper <- append.xmlNode(graph_wrapper, kn_group_yrealizer)
 # Set top graph
 top_graph <- xmlNode("graph", attrs = c("id" = "G", "edgedefault" = "directed"))
 # Special nodes S, E, f.0.0, and j.0.0.0
