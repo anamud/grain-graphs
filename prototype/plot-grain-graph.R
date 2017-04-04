@@ -793,7 +793,7 @@ if (!cl_args$enumcriticalpath) {
     critical_edges <- E(grain_graph)[V(grain_graph)[on_crit_path==1] %--% V(grain_graph)[on_crit_path==1]]
     grain_graph <- set.edge.attribute(grain_graph, name="on_crit_path", index=critical_edges, value=1)
     grain_graph <- set.edge.attribute(grain_graph, name="color", index=critical_edges, value="#FF0000")
-    grain_graph <- set.vertex.attribute(grain_graph, name="border-color", index=critical_nodes, value="#FF0000")
+    #grain_graph <- set.vertex.attribute(grain_graph, name="border-color", index=critical_nodes, value="#FF0000")
     # Cleanup
     grain_graph <- remove.vertex.attribute(grain_graph,"root_path")
     if (cl_args$verbose) {
