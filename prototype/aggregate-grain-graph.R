@@ -154,9 +154,32 @@ while(any(!g_data$grouped))
   #... Group has same parent and join parent as members
   #... Assiging unique ID row-wise is essential else we obtain inconsistent results
   #... TODO: Understand why row-wise is required to ensure consistency
-  e <- e0 %>% summarize(num_tasks = sum(num_tasks), num_members = n(), work_cycles = sum(as.numeric(work_cycles)), child_number = NA, leaf = T, group_id = NA, grouped = F, group_type = "sibling") %>% rowwise() %>% mutate(task = get_group_id())
+  e <- e0 %>% summarize(num_tasks = sum(num_tasks),
+                        num_members = n(),
+                        work_cycles = sum(as.numeric(work_cycles)),
+                        exec_cycles = sum(as.numeric(exec_cycles)),
+                        parallel_benefit = if ("parallel_benefit" %in% colnames(g_data)) min(parallel_benefit, na.rm = T) else NA,
+                        work_deviation = if ("work_deviation" %in% colnames(g_data)) max(work_deviation, na.rm = T) else NA,
+                        mem_hier_util = if ("mem_hier_util" %in% colnames(g_data)) min(mem_hier_util, na.rm = T) else NA,
+                        inst_par_median = if ("inst_par_median" %in% colnames(g_data)) min(inst_par_median, na.rm = T) else NA,
+                        inst_par_min = if ("inst_par_min" %in% colnames(g_data)) min(inst_par_min, na.rm = T) else NA,
+                        inst_par_max = if ("inst_par_max" %in% colnames(g_data)) min(inst_par_max, na.rm = T) else NA,
+                        sibling_scatter = if ("sibling_scatter" %in% colnames(g_data)) max(sibling_scatter, na.rm = T) else NA,
+                        sibling_work_balance = if ("sibling_work_balance" %in% colnames(g_data)) max(sibling_work_balance, na.rm = T) else NA,
+                        chunk_work_balance = if ("chunk_work_balance" %in% colnames(g_data)) max(chunk_work_balance, na.rm = T) else NA,
+                        problematic = if ("problematic" %in% colnames(g_data)) as.integer(any(problematic, na.rm = T)) else NA,
+                        child_number = NA,
+                        leaf = T,
+                        group_id = NA,
+                        grouped = F,
+                        group_type = "sibling"
+                        ) %>% rowwise() %>% mutate(task = get_group_id())
   # Ensure groups exist
   stopifnot(nrow(e) > 0)
+
+  # Clean-up!
+  # Functions min and max return -Inf and +Inf respectively for zero-length vectors
+  is.na(e) <- sapply(e, is.infinite)
 
   # For each group,
   #... compute aggregated attributes
@@ -205,6 +228,17 @@ while(any(!g_data$grouped))
                                   xmlNode("data", attrs = c("key" = "v_parent"), as.character(ei_parent)),
                                   xmlNode("data", attrs = c("key" = "v_joins_at"), as.character(ei_joins_at)),
                                   xmlNode("data", attrs = c("key" = "v_work_cycles"), as.character(e[i,]$work_cycles)),
+                                  xmlNode("data", attrs = c("key" = "v_exec_cycles"), as.character(e[i,]$exec_cycles)),
+                                  xmlNode("data", attrs = c("key" = "v_parallel_benefit"), as.character(e[i,]$parallel_benefit)),
+                                  xmlNode("data", attrs = c("key" = "v_work_deviation"), as.character(e[i,]$work_deviation)),
+                                  xmlNode("data", attrs = c("key" = "v_mem_hier_util"), as.character(e[i,]$mem_hier_util)),
+                                  xmlNode("data", attrs = c("key" = "v_inst_par_median"), as.character(e[i,]$inst_par_median)),
+                                  xmlNode("data", attrs = c("key" = "v_inst_par_min"), as.character(e[i,]$inst_par_min)),
+                                  xmlNode("data", attrs = c("key" = "v_inst_par_max"), as.character(e[i,]$inst_par_max)),
+                                  xmlNode("data", attrs = c("key" = "v_sibling_scatter"), as.character(e[i,]$sibling_scatter)),
+                                  xmlNode("data", attrs = c("key" = "v_sibling_work_balance"), as.character(e[i,]$sibling_work_balance)),
+                                  xmlNode("data", attrs = c("key" = "v_chunk_work_balance"), as.character(e[i,]$chunk_work_balance)),
+                                  xmlNode("data", attrs = c("key" = "v_problematic"), as.character(e[i,]$problematic)),
                                   xmlNode("data", attrs = c("key" = "v_width"), as.character(group_width)),
                                   xmlNode("data", attrs = c("key" = "v_height"), as.character(group_height)),
                                   xmlNode("data", attrs = c("key" = "v_shape"), "round rectangle"),
@@ -222,11 +256,18 @@ while(any(!g_data$grouped))
       xmlNode("y:State", attrs = c("closed" = "false"))
     )
     y_group_closed <- xmlNode("y:GroupNode")
+    y_group_closed_fill <- xmlNode("y:Fill", attrs = c("hasColor" = "false", "transparent" = "false"))
+    y_group_closed_border <- xmlNode("y:BorderStyle", attrs = c("color" = "#000000", "type" = "line", "width" = "2.0"))
+    if (!is.na(e[i,]$problematic))
+        if (e[i,]$problematic) {
+            #y_group_closed_fill <- xmlNode("y:Fill", attrs = c("color" = "#FF0000", "transparent" = "false"))
+            y_group_closed_border <- xmlNode("y:BorderStyle", attrs = c("color" = "#FF0000", "type" = "line", "width" = "3.0"))
+        }
     y_group_closed <- append.xmlNode(y_group_closed,
       xmlNode("y:Geometry", attrs = c("height" = as.character(group_height), "width" = as.character(group_width))),
-      xmlNode("y:Fill", attrs = c("hasColor" = "false", "transparent" = "false")),
+      y_group_closed_fill,
       xmlNode("y:NodeLabel", attrs = c("visible" = "false")),
-      xmlNode("y:BorderStyle", attrs = c("color" = "#000000", "type" = "line", "width" = "2.0")),
+      y_group_closed_border,
       xmlNode("y:Shape", attrs = c("type" = "roundrectangle")),
       xmlNode("y:State", attrs = c("closed" = "true"))
     )
@@ -272,8 +313,33 @@ while(any(!g_data$grouped))
   # Mark groups that completely contain children
   #... TODO: Pick the first instead of maximum child_number
   #... ... All child_numbers are the same since they are proxies for child count of parent
-  f <- g_data %>% group_by(parent) %>% filter(task > max_task_id & grouped == F) %>% summarize(num_tasks = sum(num_tasks), num_members = sum(num_members), num_sibling_groups = n(), work_cycles = sum(as.numeric(work_cycles)), child_number = max(child_number), leaf = T, group_id = NA, grouped = F) %>% filter(num_members == child_number)
+  f <- g_data %>% group_by(parent) %>% filter(task > max_task_id & grouped == F) %>% summarize(num_tasks = sum(num_tasks),
+                                                                                               num_members = sum(num_members),
+                                                                                               num_sibling_groups = n(),
+                                                                                               work_cycles = sum(as.numeric(work_cycles)),
+                                                                                               exec_cycles = sum(as.numeric(exec_cycles)),
+                                                                                               parallel_benefit = if ("parallel_benefit" %in% colnames(g_data)) min(parallel_benefit, na.rm = T) else NA,
+                                                                                               work_deviation = if ("parallel_benefit" %in% colnames(g_data)) max(work_deviation, na.rm = T) else NA,
+                                                                                               mem_hier_util = if ("mem_hier_util" %in% colnames(g_data)) min(mem_hier_util, na.rm = T) else NA,
+                                                                                               inst_par_median = if ("inst_par_median" %in% colnames(g_data)) min(inst_par_median, na.rm = T) else NA,
+                                                                                               inst_par_min = if ("inst_par_min" %in% colnames(g_data)) min(inst_par_min, na.rm = T) else NA,
+                                                                                               inst_par_max = if ("inst_par_max" %in% colnames(g_data)) min(inst_par_max, na.rm = T) else NA,
+                                                                                               sibling_scatter = if ("sibling_scatter" %in% colnames(g_data)) max(sibling_scatter, na.rm = T) else NA,
+                                                                                               sibling_work_balance = if ("sibling_work_balance" %in% colnames(g_data)) max(sibling_work_balance, na.rm = T) else NA,
+                                                                                               chunk_work_balance = if ("chunk_work_balance" %in% colnames(g_data)) max(chunk_work_balance, na.rm = T) else NA,
+                                                                                               problematic = if ("problematic" %in% colnames(g_data)) as.integer(any(problematic, na.rm = T)) else NA,
+                                                                                               child_number = max(child_number),
+                                                                                               leaf = T,
+                                                                                               group_id = NA,
+                                                                                               grouped = F
+                                                                                               ) %>% filter(num_members == child_number)
+  # Ensure groups exist
   stopifnot(nrow(f) > 0)
+
+  # Clean-up!
+  # Functions min and max return -Inf and +Inf respectively for zero-length vectors
+  is.na(f) <- sapply(f, is.infinite)
+
   f$task <- NA
   f$joins_at <- NA
   f$group_type <- "family"
@@ -305,6 +371,32 @@ while(any(!g_data$grouped))
     temp <- f[i,]$parent
     f[i,]$parent <- g_data[match,]$parent
     f[i,]$work_cycles <- as.numeric(f[i,]$work_cycles) + as.numeric(g_data[match,]$work_cycles)
+    f[i,]$exec_cycles <- as.numeric(f[i,]$exec_cycles) + as.numeric(g_data[match,]$exec_cycles)
+    if ("parallel_benefit" %in% colnames(g_data))
+        f[i,]$parallel_benefit = min(f[i,]$parallel_benefit, min(as.numeric(g_data[match,]$parallel_benefit), na.rm = T))
+    if ("work_deviation" %in% colnames(g_data))
+        f[i,]$work_deviation = max(f[i,]$work_deviation, max(as.numeric(g_data[match,]$work_deviation), na.rm = T))
+    if ("mem_hier_util" %in% colnames(g_data))
+        f[i,]$mem_hier_util = min(f[i,]$mem_hier_util, min(as.numeric(g_data[match,]$mem_hier_util), na.rm = T))
+    if ("inst_par_median" %in% colnames(g_data))
+        f[i,]$inst_par_median = min(f[i,]$inst_par_median, min(as.numeric(g_data[match,]$inst_par_median), na.rm = T))
+    if ("inst_par_min" %in% colnames(g_data))
+        f[i,]$inst_par_min = min(f[i,]$inst_par_min, min(as.numeric(g_data[match,]$inst_par_min), na.rm = T))
+    if ("inst_par_max" %in% colnames(g_data))
+        f[i,]$inst_par_max = min(f[i,]$inst_par_max, min(as.numeric(g_data[match,]$inst_par_max), na.rm = T))
+    if ("sibling_scatter" %in% colnames(g_data))
+        f[i,]$sibling_scatter = max(f[i,]$sibling_scatter, max(as.numeric(g_data[match,]$sibling_scatter), na.rm = T))
+    if ("sibling_work_balance" %in% colnames(g_data))
+        f[i,]$sibling_work_balance = max(f[i,]$sibling_work_balance, max(as.numeric(g_data[match,]$sibling_work_balance), na.rm = T))
+    if ("chunk_work_balance" %in% colnames(g_data))
+        f[i,]$chunk_work_balance = max(f[i,]$chunk_work_balance, max(as.numeric(g_data[match,]$chunk_work_balance), na.rm = T))
+    if ("problematic" %in% colnames(g_data))
+        f[i,]$problematic = as.integer(any(f[i,]$problematic, as.integer(any(as.numeric(g_data[match,]$problematic), na.rm = T))))
+
+    # Clean-up!
+    # Functions min and max return -Inf and +Inf respectively for zero-length vectors
+    is.na(f) <- sapply(f, is.infinite)
+
     f[i,]$child_number <- g_data[match,]$num_children
     f[i,]$num_tasks <-  f[i,]$num_tasks + g_data[match,]$num_tasks
 
@@ -335,6 +427,17 @@ while(any(!g_data$grouped))
                                    xmlNode("data", attrs = c("key" = "v_parent"), as.character(f[i,]$parent)),
                                    xmlNode("data", attrs = c("key" = "v_joins_at"), as.character(f[i,]$joins_at)),
                                    xmlNode("data", attrs = c("key" = "v_work_cycles"), as.character(f[i,]$work_cycles)),
+                                   xmlNode("data", attrs = c("key" = "v_exec_cycles"), as.character(f[i,]$exec_cycles)),
+                                   xmlNode("data", attrs = c("key" = "v_parallel_benefit"), as.character(f[i,]$parallel_benefit)),
+                                   xmlNode("data", attrs = c("key" = "v_work_deviation"), as.character(f[i,]$work_deviation)),
+                                   xmlNode("data", attrs = c("key" = "v_mem_hier_util"), as.character(f[i,]$mem_hier_util)),
+                                   xmlNode("data", attrs = c("key" = "v_inst_par_median"), as.character(f[i,]$inst_par_median)),
+                                   xmlNode("data", attrs = c("key" = "v_inst_par_min"), as.character(f[i,]$inst_par_min)),
+                                   xmlNode("data", attrs = c("key" = "v_inst_par_max"), as.character(f[i,]$inst_par_max)),
+                                   xmlNode("data", attrs = c("key" = "v_sibling_scatter"), as.character(f[i,]$sibling_scatter)),
+                                   xmlNode("data", attrs = c("key" = "v_sibling_work_balance"), as.character(f[i,]$sibling_work_balance)),
+                                   xmlNode("data", attrs = c("key" = "v_chunk_work_balance"), as.character(f[i,]$chunk_work_balance)),
+                                   xmlNode("data", attrs = c("key" = "v_problematic"), as.character(f[i,]$problematic)),
                                    xmlNode("data", attrs = c("key" = "v_width"), as.character(group_width)),
                                    xmlNode("data", attrs = c("key" = "v_height"), as.character(group_height)),
                                    xmlNode("data", attrs = c("key" = "v_shape"), "round rectangle"),
@@ -352,11 +455,18 @@ while(any(!g_data$grouped))
       xmlNode("y:State", attrs = c("closed" = "false"))
     )
     y_group_closed <- xmlNode("y:GroupNode")
+    y_group_closed_fill <- xmlNode("y:Fill", attrs = c("hasColor" = "false", "transparent" = "false"))
+    y_group_closed_border <- xmlNode("y:BorderStyle", attrs = c("color" = "#000000", "type" = "line", "width" = "2.0"))
+    if (!is.na(f[i,]$problematic))
+        if (f[i,]$problematic) {
+            #y_group_closed_fill <- xmlNode("y:Fill", attrs = c("color" = "#FF0000", "transparent" = "false"))
+            y_group_closed_border <- xmlNode("y:BorderStyle", attrs = c("color" = "#FF0000", "type" = "line", "width" = "3.0"))
+        }
     y_group_closed <- append.xmlNode(y_group_closed,
       xmlNode("y:Geometry", attrs = c("height" = as.character(group_height), "width" = as.character(group_width))),
-      xmlNode("y:Fill", attrs = c("hasColor" = "false", "transparent" = "false")),
+      y_group_closed_fill,
       xmlNode("y:NodeLabel", attrs = c("visible" = "false")),
-      xmlNode("y:BorderStyle", attrs = c("color" = "#000000", "type" = "line", "width" = "2.0")),
+      y_group_closed_border,
       xmlNode("y:Shape", attrs = c("type" = "roundrectangle")),
       xmlNode("y:State", attrs = c("closed" = "true"))
     )
