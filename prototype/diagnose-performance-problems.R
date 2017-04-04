@@ -16,8 +16,8 @@ config_dir <- paste(grain_graphs_root_dir, "/prototype/configs", sep="")
 Rstudio_mode <- F
 if (Rstudio_mode) {
     cl_args <- list(graph="grain-graph.graphml",
-                   problemthresholdconfig="problem-thresholds.cfg",
-                   out="grain-graph-view",
+                   problemthresholdconfig="grain-problems.cfg",
+                   out="grain-graph-diagnosis",
                    layout=F,
                    verbose=T,
                    timing=F)
