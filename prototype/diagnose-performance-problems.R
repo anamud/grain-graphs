@@ -6,8 +6,11 @@
 rm(list=ls())
 
 # Include support functions
-mir_root <- Sys.getenv("GRAIN_GRAPHS_ROOT")
-source(paste(mir_root,"/prototype/common.R",sep=""))
+grain_graphs_root_dir <- Sys.getenv("GRAIN_GRAPHS_ROOT")
+source(paste(grain_graphs_root_dir,"/prototype/common.R", sep=""))
+
+# Default configs
+config_dir <- paste(grain_graphs_root_dir, "/prototype/configs", sep="")
 
 # Parse args
 Rstudio_mode <- F
@@ -20,7 +23,7 @@ if (Rstudio_mode) {
                    timing=F)
 } else {
     option_list <- list(make_option(c("--graph"), help = "Grain graph in GRAPHML format.", metavar="FILE"),
-                        make_option(c("--grainproblemconfig"), default="grain-problems.cfg", help = "Grain problem configuration file [default \"%default\"].", metavar="FILE"),
+                        make_option(c("--grainproblemconfig"), default= paste(config_dir, "/grain-problems.cfg", sep=""), help = "Grain problem configuration file [default \"%default\"].", metavar="FILE"),
                         make_option(c("-o","--out"), default="grain-graph-diagnosis", help = "Output file suffix [default \"%default\"].", metavar="STRING"),
                         make_option(c("--layout"), action="store_true", default=FALSE, help="Layout using Sugiyama style and plot to PDF."),
                         make_option(c("--verbose"), action="store_true", default=TRUE, help="Print output [default]."),
