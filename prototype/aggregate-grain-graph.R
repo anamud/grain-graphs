@@ -168,6 +168,7 @@ while(any(!g_data$grouped))
                         sibling_work_balance = if ("sibling_work_balance" %in% colnames(g_data)) max(sibling_work_balance, na.rm = T) else NA,
                         chunk_work_balance = if ("chunk_work_balance" %in% colnames(g_data)) max(chunk_work_balance, na.rm = T) else NA,
                         problematic = if ("problematic" %in% colnames(g_data)) as.integer(any(problematic, na.rm = T)) else NA,
+                        on_crit_path = if ("on_crit_path" %in% colnames(g_data)) as.integer(any(on_crit_path, na.rm = T)) else NA,
                         child_number = NA,
                         leaf = T,
                         group_id = NA,
@@ -239,6 +240,7 @@ while(any(!g_data$grouped))
                                   xmlNode("data", attrs = c("key" = "v_sibling_work_balance"), as.character(e[i,]$sibling_work_balance)),
                                   xmlNode("data", attrs = c("key" = "v_chunk_work_balance"), as.character(e[i,]$chunk_work_balance)),
                                   xmlNode("data", attrs = c("key" = "v_problematic"), as.character(e[i,]$problematic)),
+                                  xmlNode("data", attrs = c("key" = "v_on_crit_path"), as.character(e[i,]$on_crit_path)),
                                   xmlNode("data", attrs = c("key" = "v_width"), as.character(group_width)),
                                   xmlNode("data", attrs = c("key" = "v_height"), as.character(group_height)),
                                   xmlNode("data", attrs = c("key" = "v_shape"), "round rectangle"),
@@ -328,6 +330,7 @@ while(any(!g_data$grouped))
                                                                                                sibling_work_balance = if ("sibling_work_balance" %in% colnames(g_data)) max(sibling_work_balance, na.rm = T) else NA,
                                                                                                chunk_work_balance = if ("chunk_work_balance" %in% colnames(g_data)) max(chunk_work_balance, na.rm = T) else NA,
                                                                                                problematic = if ("problematic" %in% colnames(g_data)) as.integer(any(problematic, na.rm = T)) else NA,
+                                                                                               on_crit_path = if ("on_crit_path" %in% colnames(g_data)) as.integer(any(on_crit_path, na.rm = T)) else NA,
                                                                                                child_number = max(child_number),
                                                                                                leaf = T,
                                                                                                group_id = NA,
@@ -392,6 +395,8 @@ while(any(!g_data$grouped))
         f[i,]$chunk_work_balance = max(f[i,]$chunk_work_balance, max(as.numeric(g_data[match,]$chunk_work_balance), na.rm = T))
     if ("problematic" %in% colnames(g_data))
         f[i,]$problematic = as.integer(any(f[i,]$problematic, as.integer(any(as.numeric(g_data[match,]$problematic), na.rm = T))))
+    if ("on_crit_path" %in% colnames(g_data))
+        f[i,]$on_crit_path = as.integer(any(f[i,]$on_crit_path, as.integer(any(as.numeric(g_data[match,]$on_crit_path), na.rm = T))))
 
     # Clean-up!
     # Functions min and max return -Inf and +Inf respectively for zero-length vectors
@@ -438,6 +443,7 @@ while(any(!g_data$grouped))
                                    xmlNode("data", attrs = c("key" = "v_sibling_work_balance"), as.character(f[i,]$sibling_work_balance)),
                                    xmlNode("data", attrs = c("key" = "v_chunk_work_balance"), as.character(f[i,]$chunk_work_balance)),
                                    xmlNode("data", attrs = c("key" = "v_problematic"), as.character(f[i,]$problematic)),
+                                   xmlNode("data", attrs = c("key" = "v_on_crit_path"), as.character(f[i,]$on_crit_path)),
                                    xmlNode("data", attrs = c("key" = "v_width"), as.character(group_width)),
                                    xmlNode("data", attrs = c("key" = "v_height"), as.character(group_height)),
                                    xmlNode("data", attrs = c("key" = "v_shape"), "round rectangle"),
