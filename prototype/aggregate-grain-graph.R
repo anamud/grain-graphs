@@ -114,9 +114,8 @@ g_data$group_type <- "task"
 
 # Rough sketch of iterative algorithm for grouping
 # 1. Mark all leaf siblings
-# ... Leaf siblings are tasks without children and sharing the same fork/join points
+# ... Leaf siblings are complete sets of siblings that are leaves (i.e., without any children)
 # ... Single leaf siblings are possible too
-# ... Since groups are added as tasks, groups that share the same join point are leaf siblings too
 # 2. Group leaf siblings, join point, fork point together (members) into a leaf sibling group
 # 3. Assign unique id, accumulate attributes and performance of group members sensibly, and add as leaf task
 # 4. Mark all families
@@ -149,7 +148,7 @@ while(any(!g_data$grouped))
   if (cl_args$timing) tic(type="elapsed")
 
   # Mark leaf siblings
-  e0 <- g_data %>% group_by(parent, joins_at) %>% filter(leaf == T & grouped == F)
+  e0 <- g_data %>% group_by(parent, joins_at) %>% filter(grouped == F) %>% mutate(num_siblings = n()) %>% filter(leaf == T) %>% mutate(leaf_sibling = (n() == num_siblings)) %>% filter(leaf_sibling == T)
   # Group and compute aggregated attributes
   #... Group has same parent and join parent as members
   #... Assiging unique ID row-wise is essential else we obtain inconsistent results
