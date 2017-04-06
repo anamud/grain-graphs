@@ -20,6 +20,7 @@ group_height <- 50
 Rstudio_mode <- F
 if (Rstudio_mode) {
   cl_args <- list(graph="grain-graph.graphml",
+                 hidenonproblems=F,
                  verbose=T,
                  timing=F,
                  outdata="aggregated-grain-graph-data.csv",
@@ -27,6 +28,7 @@ if (Rstudio_mode) {
 } else {
   option_list <- list(
     make_option(c("--graph"), help = "Grain graph (GRAPHML).", metavar="FILE"), # Cannot add -g as option since it is parsed by Rscript as "gui" option
+    make_option(c("--hidenonproblems"), action="store_true", default=FALSE, help="Group non-problematic nodes to improve focus on problems."),
     make_option(c("--verbose"), action="store_true", default=TRUE, help="Print output [default]."),
     make_option(c("--timing"), action="store_true", default=FALSE, help="Print timing information."),
     make_option(c("--outdata"), default="aggregated-grain-graph-data.csv", help = "Aggregated graph data output file [default \"%default\"]", metavar="STRING"),
@@ -126,6 +128,11 @@ g_data$group_type <- "task"
 
 if (cl_args$verbose) my_print("Aggregating ...")
 
+hide_mode <- F
+if (cl_args$hidenonproblems & ("problematic" %in% colnames(g_data))) {
+    hide_mode <- T
+}
+
 itr_count <- 0
 while(any(!g_data$grouped))
 {
@@ -141,6 +148,159 @@ while(any(!g_data$grouped))
       if (cl_args$verbose) my_print("Only implicit task is ungrouped. Stopping.")
       break
     }
+  }
+
+  # Group non-problematic leaf siblings if hide mode is enabled
+  if (hide_mode) {
+      # Group leaf siblings that are problematic
+      #if (cl_args$verbose) my_print("Grouping leaf siblings that are problematic ...")
+      if (cl_args$timing) tic(type="elapsed")
+
+      d0 <- g_data %>% group_by(parent, joins_at) %>% filter(grouped == F) %>% mutate(num_siblings = n()) %>% filter(leaf == T) %>% mutate(leaf_sibling = (n() == num_siblings)) %>% filter(leaf_sibling == T & problematic == F)
+      if (nrow(d0) > 0) {
+          # Group and compute aggregated attributes
+          #... Group has same parent and join parent as members
+          #... Assiging unique ID row-wise is essential else we obtain inconsistent results
+          #... TODO: Understand why row-wise is required to ensure consistency
+          d <- d0 %>% summarize(num_tasks = sum(num_tasks),
+                                num_members = n(),
+                                work_cycles = sum(as.numeric(work_cycles)),
+                                exec_cycles = sum(as.numeric(exec_cycles)),
+                                parallel_benefit = if ("parallel_benefit" %in% colnames(g_data)) min(parallel_benefit, na.rm = T) else NA,
+                                work_deviation = if ("work_deviation" %in% colnames(g_data)) max(work_deviation, na.rm = T) else NA,
+                                mem_hier_util = if ("mem_hier_util" %in% colnames(g_data)) min(mem_hier_util, na.rm = T) else NA,
+                                inst_par_median = if ("inst_par_median" %in% colnames(g_data)) min(inst_par_median, na.rm = T) else NA,
+                                inst_par_min = if ("inst_par_min" %in% colnames(g_data)) min(inst_par_min, na.rm = T) else NA,
+                                inst_par_max = if ("inst_par_max" %in% colnames(g_data)) min(inst_par_max, na.rm = T) else NA,
+                                sibling_scatter = if ("sibling_scatter" %in% colnames(g_data)) max(sibling_scatter, na.rm = T) else NA,
+                                sibling_work_balance = if ("sibling_work_balance" %in% colnames(g_data)) max(sibling_work_balance, na.rm = T) else NA,
+                                chunk_work_balance = if ("chunk_work_balance" %in% colnames(g_data)) max(chunk_work_balance, na.rm = T) else NA,
+                                problematic = 0,
+                                on_crit_path = if ("on_crit_path" %in% colnames(g_data)) as.integer(any(on_crit_path, na.rm = T)) else NA,
+                                child_number = NA,
+                                leaf = T,
+                                group_id = NA,
+                                grouped = F,
+                                group_type = "non-problematic-sibling"
+                                ) %>% rowwise() %>% mutate(task = get_group_id())
+
+          # Clean-up!
+          # Functions min and max return -Inf and +Inf respectively for zero-length vectors
+          is.na(d) <- sapply(d, is.infinite)
+
+          # For each group,
+          #... compute aggregated attributes
+          #... mark members as grouped and update group_id
+          #... FIXME: Loop is slow. Make fast!
+          for(i in seq_len(nrow(d)))
+          {
+            # For quick retrieval
+            di_task <-  d[i,]$task
+            di_parent <- d[i,]$parent
+            di_joins_at <- d[i,]$joins_at
+
+            # Update members attributes
+            d1 <- subset(d0, parent == di_parent & joins_at == di_joins_at)
+            matches <- which(g_data$task %in% d1$task)
+            g_data[matches, ]$group_id <- di_task
+            g_data[matches, ]$grouped <- T
+
+            # Update group attributes
+            d[i,]$group_id <- di_task
+
+            # Add group node to graph
+            # Create new group node
+            new_group <- xmlNode("graph", attrs = c("id" = paste("g", as.character(di_task), sep = ""),
+                                                    "edgedefault" = "directed"))
+            # Add nodes of members as children
+            member_nodes <- which(node_ids_names$name %in% c(as.character(d1$task)))
+            new_group <- append.xmlNode(new_group, lapply(member_nodes, function(member_node) nodes_xml[[member_node]]))
+            member_groups <- which(group_ids_names$name %in% as.character(d1$task))
+            new_group <- append.xmlNode(new_group, lapply(member_groups, function(member_group) groups_xml[[member_group]]))
+            # Node wrapper
+            node_wrapper <- xmlNode("node", attrs = c("id" = paste("g", as.character(di_task), "n", sep = ""), "yfiles.foldertype" = "folder"))
+            # Add specific key nodes as children
+            node_wrapper <- append.xmlNode(node_wrapper,
+                                          xmlNode("data", attrs = c("key" = "v_label"), as.character(di_task)),
+                                          xmlNode("data", attrs = c("key" = "v_name"), as.character(di_task)),
+                                          xmlNode("data", attrs = c("key" = "v_task"), as.character(di_task)),
+                                          xmlNode("data", attrs = c("key" = "v_parent"), as.character(di_parent)),
+                                          xmlNode("data", attrs = c("key" = "v_joins_at"), as.character(di_joins_at)),
+                                          xmlNode("data", attrs = c("key" = "v_work_cycles"), as.character(d[i,]$work_cycles)),
+                                          xmlNode("data", attrs = c("key" = "v_exec_cycles"), as.character(d[i,]$exec_cycles)),
+                                          xmlNode("data", attrs = c("key" = "v_parallel_benefit"), as.character(d[i,]$parallel_benefit)),
+                                          xmlNode("data", attrs = c("key" = "v_work_deviation"), as.character(d[i,]$work_deviation)),
+                                          xmlNode("data", attrs = c("key" = "v_mem_hier_util"), as.character(d[i,]$mem_hier_util)),
+                                          xmlNode("data", attrs = c("key" = "v_inst_par_median"), as.character(d[i,]$inst_par_median)),
+                                          xmlNode("data", attrs = c("key" = "v_inst_par_min"), as.character(d[i,]$inst_par_min)),
+                                          xmlNode("data", attrs = c("key" = "v_inst_par_max"), as.character(d[i,]$inst_par_max)),
+                                          xmlNode("data", attrs = c("key" = "v_sibling_scatter"), as.character(d[i,]$sibling_scatter)),
+                                          xmlNode("data", attrs = c("key" = "v_sibling_work_balance"), as.character(d[i,]$sibling_work_balance)),
+                                          xmlNode("data", attrs = c("key" = "v_chunk_work_balance"), as.character(d[i,]$chunk_work_balance)),
+                                          xmlNode("data", attrs = c("key" = "v_problematic"), as.character(d[i,]$problematic)),
+                                          xmlNode("data", attrs = c("key" = "v_on_crit_path"), as.character(d[i,]$on_crit_path)),
+                                          xmlNode("data", attrs = c("key" = "v_width"), as.character(group_width)),
+                                          xmlNode("data", attrs = c("key" = "v_height"), as.character(group_height)),
+                                          xmlNode("data", attrs = c("key" = "v_shape"), "round rectangle"),
+                                          xmlNode("data", attrs = c("key" = "v_num_tasks"), as.character(d[i,]$num_tasks)),
+                                          xmlNode("data", attrs = c("key" = "v_num_members"), as.character(d[i,]$num_members)),
+                                          xmlNode("data", attrs = c("key" = "v_group_type"), as.character(d[i,]$group_type))
+                                          )
+            y_group_open <- xmlNode("y:GroupNode")
+            y_group_open <- append.xmlNode(y_group_open,
+              xmlNode("y:Geometry", attrs = c("height" = as.character(group_height), "width" = as.character(group_width))),
+              xmlNode("y:Fill", attrs = c("hasColor" = "false", "transparent" = "false")),
+              xmlNode("y:NodeLabel", attrs = c("visible" = "false")),
+              xmlNode("y:BorderStyle", attrs = c("color" = "#000000", "type" = "line", "width" = "2.0")),
+              xmlNode("y:Shape", attrs = c("type" = "roundrectangle")),
+              xmlNode("y:State", attrs = c("closed" = "false"))
+            )
+            y_group_closed <- xmlNode("y:GroupNode")
+            y_group_closed_fill <- xmlNode("y:Fill", attrs = c("hasColor" = "false", "transparent" = "false"))
+            y_group_closed_border <- xmlNode("y:BorderStyle", attrs = c("color" = "#00FF00", "type" = "line", "width" = "2.0"))
+            y_group_closed <- append.xmlNode(y_group_closed,
+              xmlNode("y:Geometry", attrs = c("height" = as.character(group_height), "width" = as.character(group_width))),
+              y_group_closed_fill,
+              xmlNode("y:NodeLabel", attrs = c("visible" = "false")),
+              y_group_closed_border,
+              xmlNode("y:Shape", attrs = c("type" = "roundrectangle")),
+              xmlNode("y:State", attrs = c("closed" = "true"))
+            )
+            y_realizers <- xmlNode("y:Realizers", attrs = c("active" = "0"))
+            y_realizers <- append.xmlNode(y_realizers, y_group_closed, y_group_open)
+            y_proxyautobounds <- xmlNode("y:ProxyAutoBoundsNode")
+            y_proxyautobounds <- append.xmlNode(y_proxyautobounds, y_realizers)
+            y_realizers_w <- xmlNode("data", attrs = c("key" ="v_group_yrealizer"))
+            y_realizers_w <- append.xmlNode(y_realizers_w, y_proxyautobounds)
+            node_wrapper <- append.xmlNode(node_wrapper, y_realizers_w)
+            new_group <- append.xmlNode(node_wrapper, new_group)
+            # Keep only yet to be grouped
+            if(length(member_groups) > 0)
+            {
+                group_ids_names <- group_ids_names[-c(member_groups),]
+                groups_xml <- removeChildren(groups_xml, kids = as.numeric(member_groups), free = T)
+            }
+            # Add group as child
+            groups_xml <- append.xmlNode(groups_xml, new_group)
+            # Update table
+            group_ids_names <- bind_rows(group_ids_names, data.frame(id = paste("g", as.character(di_task), "n", sep = ""), name = as.character(di_task)))
+            # Make sure group table mirrors order in XML root
+            # TODO: Make fast
+            stopifnot(all(group_ids_names$id == as.character(lapply(xmlChildren(groups_xml), xmlGetAttr, "id"))))
+
+            # Release unused nodes
+            rm(new_group)
+            rm(node_wrapper)
+          }
+
+          # Add leaf sibling groups as tasks
+          g_data <- bind_rows(g_data, d)
+      }
+
+      # Garbage collect
+      invisible(gc(reset=T))
+
+      if (cl_args$timing) toc("Group non-problematic leaf siblings")
   }
 
   # Group leaf siblings
