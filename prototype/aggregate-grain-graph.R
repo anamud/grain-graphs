@@ -174,6 +174,7 @@ while(any(!g_data$grouped))
                         grouped = F,
                         group_type = "sibling"
                         ) %>% rowwise() %>% mutate(task = get_group_id())
+
   # Ensure groups exist
   stopifnot(nrow(e) > 0)
 
@@ -315,26 +316,27 @@ while(any(!g_data$grouped))
   #... TODO: Pick the first instead of maximum child_number
   #... ... All child_numbers are the same since they are proxies for child count of parent
   f <- g_data %>% group_by(parent) %>% filter(task > max_task_id & grouped == F) %>% summarize(num_tasks = sum(num_tasks),
-                                                                                               num_members = sum(num_members),
-                                                                                               num_sibling_groups = n(),
-                                                                                               work_cycles = sum(as.numeric(work_cycles)),
-                                                                                               exec_cycles = sum(as.numeric(exec_cycles)),
-                                                                                               parallel_benefit = if ("parallel_benefit" %in% colnames(g_data)) min(parallel_benefit, na.rm = T) else NA,
-                                                                                               work_deviation = if ("parallel_benefit" %in% colnames(g_data)) max(work_deviation, na.rm = T) else NA,
-                                                                                               mem_hier_util = if ("mem_hier_util" %in% colnames(g_data)) min(mem_hier_util, na.rm = T) else NA,
-                                                                                               inst_par_median = if ("inst_par_median" %in% colnames(g_data)) min(inst_par_median, na.rm = T) else NA,
-                                                                                               inst_par_min = if ("inst_par_min" %in% colnames(g_data)) min(inst_par_min, na.rm = T) else NA,
-                                                                                               inst_par_max = if ("inst_par_max" %in% colnames(g_data)) min(inst_par_max, na.rm = T) else NA,
-                                                                                               sibling_scatter = if ("sibling_scatter" %in% colnames(g_data)) max(sibling_scatter, na.rm = T) else NA,
-                                                                                               sibling_work_balance = if ("sibling_work_balance" %in% colnames(g_data)) max(sibling_work_balance, na.rm = T) else NA,
-                                                                                               chunk_work_balance = if ("chunk_work_balance" %in% colnames(g_data)) max(chunk_work_balance, na.rm = T) else NA,
-                                                                                               problematic = if ("problematic" %in% colnames(g_data)) as.integer(any(problematic, na.rm = T)) else NA,
-                                                                                               on_crit_path = if ("on_crit_path" %in% colnames(g_data)) as.integer(any(on_crit_path, na.rm = T)) else NA,
-                                                                                               child_number = max(child_number),
-                                                                                               leaf = T,
-                                                                                               group_id = NA,
-                                                                                               grouped = F
-                                                                                               ) %>% filter(num_members == child_number)
+           num_members = sum(num_members),
+           num_sibling_groups = n(),
+           work_cycles = sum(as.numeric(work_cycles)),
+           exec_cycles = sum(as.numeric(exec_cycles)),
+           parallel_benefit = if ("parallel_benefit" %in% colnames(g_data)) min(parallel_benefit, na.rm = T) else NA,
+           work_deviation = if ("parallel_benefit" %in% colnames(g_data)) max(work_deviation, na.rm = T) else NA,
+           mem_hier_util = if ("mem_hier_util" %in% colnames(g_data)) min(mem_hier_util, na.rm = T) else NA,
+           inst_par_median = if ("inst_par_median" %in% colnames(g_data)) min(inst_par_median, na.rm = T) else NA,
+           inst_par_min = if ("inst_par_min" %in% colnames(g_data)) min(inst_par_min, na.rm = T) else NA,
+           inst_par_max = if ("inst_par_max" %in% colnames(g_data)) min(inst_par_max, na.rm = T) else NA,
+           sibling_scatter = if ("sibling_scatter" %in% colnames(g_data)) max(sibling_scatter, na.rm = T) else NA,
+           sibling_work_balance = if ("sibling_work_balance" %in% colnames(g_data)) max(sibling_work_balance, na.rm = T) else NA,
+           chunk_work_balance = if ("chunk_work_balance" %in% colnames(g_data)) max(chunk_work_balance, na.rm = T) else NA,
+           problematic = if ("problematic" %in% colnames(g_data)) as.integer(any(problematic, na.rm = T)) else NA,
+           on_crit_path = if ("on_crit_path" %in% colnames(g_data)) as.integer(any(on_crit_path, na.rm = T)) else NA,
+           child_number = max(child_number),
+           leaf = T,
+           group_id = NA,
+           grouped = F
+           ) %>% filter(num_members == child_number)
+
   # Ensure groups exist
   stopifnot(nrow(f) > 0)
 
