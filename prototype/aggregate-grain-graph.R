@@ -6,8 +6,8 @@
 rm(list=ls())
 
 # Include support functions
-mir_root <- Sys.getenv("GRAIN_GRAPHS_ROOT")
-source(paste(mir_root,"/prototype/common.R",sep=""))
+grain_graphs_root_dir <- Sys.getenv("GRAIN_GRAPHS_ROOT")
+source(paste(grain_graphs_root_dir,"/prototype/common.R", sep=""))
 
 # Import
 library(XML)
