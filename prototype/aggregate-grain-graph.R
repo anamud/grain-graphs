@@ -266,8 +266,8 @@ while(any(!g_data$grouped))
               xmlNode("y:Shape", attrs = c("type" = "roundrectangle")),
               xmlNode("y:State", attrs = c("closed" = "true"))
             )
-            y_realizers <- xmlNode("y:Realizers", attrs = c("active" = "0"))
-            y_realizers <- append.xmlNode(y_realizers, y_group_closed, y_group_open)
+            y_realizers <- xmlNode("y:Realizers", attrs = c("active" = "1"))
+            y_realizers <- append.xmlNode(y_realizers, y_group_open, y_group_closed)
             y_proxyautobounds <- xmlNode("y:ProxyAutoBoundsNode")
             y_proxyautobounds <- append.xmlNode(y_proxyautobounds, y_realizers)
             y_realizers_w <- xmlNode("data", attrs = c("key" ="v_group_yrealizer"))
@@ -362,11 +362,17 @@ while(any(!g_data$grouped))
 
     # Update group attributes
     e[i,]$group_id <- ei_task
+    e[i,]$group_leader <- g_data[matches[1], ]$task
     # Save parent's child count for use during family grouping
     match <- which(g_data$task == ei_parent)
     stopifnot(length(match) == 1)
     # Using child_number as a placeholder for number of children of parent
     e[i,]$child_number <- g_data[match,]$num_children
+    # Correct num_members attribute to include members in non-problematic sibling groups
+    e2 <- e1 %>% filter(group_type == "non-problematic-sibling") %>% summarize(count = n(), num_members = sum(num_members))
+    if (nrow(e2) > 0) {
+        e[i,]$num_members <- e[i,]$num_members - e2$count + e2$num_members
+    }
 
     # Add group node to graph
     # Create new group node
@@ -423,7 +429,7 @@ while(any(!g_data$grouped))
     if (!is.na(e[i,]$problematic))
         if (e[i,]$problematic) {
             #y_group_closed_fill <- xmlNode("y:Fill", attrs = c("color" = "#FF0000", "transparent" = "false"))
-            y_group_closed_border <- xmlNode("y:BorderStyle", attrs = c("color" = "#FF0000", "type" = "line", "width" = "3.0"))
+            y_group_closed_border <- xmlNode("y:BorderStyle", attrs = c("color" = "#FF0000", "type" = "line", "width" = "2.0"))
         }
     y_group_closed <- append.xmlNode(y_group_closed,
       xmlNode("y:Geometry", attrs = c("height" = as.character(group_height), "width" = as.character(group_width))),
@@ -433,8 +439,8 @@ while(any(!g_data$grouped))
       xmlNode("y:Shape", attrs = c("type" = "roundrectangle")),
       xmlNode("y:State", attrs = c("closed" = "true"))
     )
-    y_realizers <- xmlNode("y:Realizers", attrs = c("active" = "0"))
-    y_realizers <- append.xmlNode(y_realizers, y_group_closed, y_group_open)
+    y_realizers <- xmlNode("y:Realizers", attrs = c("active" = "1"))
+    y_realizers <- append.xmlNode(y_realizers, y_group_open, y_group_closed)
     y_proxyautobounds <- xmlNode("y:ProxyAutoBoundsNode")
     y_proxyautobounds <- append.xmlNode(y_proxyautobounds, y_realizers)
     y_realizers_w <- xmlNode("data", attrs = c("key" ="v_group_yrealizer"))
@@ -627,7 +633,7 @@ while(any(!g_data$grouped))
     if (!is.na(f[i,]$problematic))
         if (f[i,]$problematic) {
             #y_group_closed_fill <- xmlNode("y:Fill", attrs = c("color" = "#FF0000", "transparent" = "false"))
-            y_group_closed_border <- xmlNode("y:BorderStyle", attrs = c("color" = "#FF0000", "type" = "line", "width" = "3.0"))
+            y_group_closed_border <- xmlNode("y:BorderStyle", attrs = c("color" = "#FF0000", "type" = "line", "width" = "2.0"))
         }
     y_group_closed <- append.xmlNode(y_group_closed,
       xmlNode("y:Geometry", attrs = c("height" = as.character(group_height), "width" = as.character(group_width))),
@@ -637,8 +643,8 @@ while(any(!g_data$grouped))
       xmlNode("y:Shape", attrs = c("type" = "roundrectangle")),
       xmlNode("y:State", attrs = c("closed" = "true"))
     )
-    y_realizers <- xmlNode("y:Realizers", attrs = c("active" = "0"))
-    y_realizers <- append.xmlNode(y_realizers, y_group_closed, y_group_open)
+    y_realizers <- xmlNode("y:Realizers", attrs = c("active" = "1"))
+    y_realizers <- append.xmlNode(y_realizers, y_group_open, y_group_closed)
     y_proxyautobounds <- xmlNode("y:ProxyAutoBoundsNode")
     y_proxyautobounds <- append.xmlNode(y_proxyautobounds, y_realizers)
     y_realizers_w <- xmlNode("data", attrs = c("key" ="v_group_yrealizer"))
