@@ -113,6 +113,8 @@ g_data$num_members <- 1
 # Group types: task, sibling, family
 # Task means an implicit group
 g_data$group_type <- "task"
+# Group leader
+g_data$group_leader <- g_data$task
 
 # Rough sketch of iterative algorithm for grouping
 # 1. Mark all leaf siblings
@@ -181,7 +183,8 @@ while(any(!g_data$grouped))
                                 leaf = T,
                                 group_id = NA,
                                 grouped = F,
-                                group_type = "non-problematic-sibling"
+                                group_type = "non-problematic-sibling",
+                                group_leader = NA
                                 ) %>% rowwise() %>% mutate(task = get_group_id())
 
           # Clean-up!
@@ -207,6 +210,7 @@ while(any(!g_data$grouped))
 
             # Update group attributes
             d[i,]$group_id <- di_task
+            d[i,]$group_leader <- g_data[matches[1], ]$task
 
             # Add group node to graph
             # Create new group node
@@ -244,7 +248,8 @@ while(any(!g_data$grouped))
                                           xmlNode("data", attrs = c("key" = "v_shape"), "round rectangle"),
                                           xmlNode("data", attrs = c("key" = "v_num_tasks"), as.character(d[i,]$num_tasks)),
                                           xmlNode("data", attrs = c("key" = "v_num_members"), as.character(d[i,]$num_members)),
-                                          xmlNode("data", attrs = c("key" = "v_group_type"), as.character(d[i,]$group_type))
+                                          xmlNode("data", attrs = c("key" = "v_group_type"), as.character(d[i,]$group_type)),
+                                          xmlNode("data", attrs = c("key" = "v_group_leader"), as.character(d[i,]$group_leader))
                                           )
             y_group_open <- xmlNode("y:GroupNode")
             y_group_open <- append.xmlNode(y_group_open,
@@ -332,7 +337,8 @@ while(any(!g_data$grouped))
                         leaf = T,
                         group_id = NA,
                         grouped = F,
-                        group_type = "sibling"
+                        group_type = "sibling",
+                        group_leader = NA
                         ) %>% rowwise() %>% mutate(task = get_group_id())
 
   # Ensure groups exist
@@ -412,7 +418,8 @@ while(any(!g_data$grouped))
                                   xmlNode("data", attrs = c("key" = "v_shape"), "round rectangle"),
                                   xmlNode("data", attrs = c("key" = "v_num_tasks"), as.character(e[i,]$num_tasks)),
                                   xmlNode("data", attrs = c("key" = "v_num_members"), as.character(e[i,]$num_members)),
-                                  xmlNode("data", attrs = c("key" = "v_group_type"), as.character(e[i,]$group_type))
+                                  xmlNode("data", attrs = c("key" = "v_group_type"), as.character(e[i,]$group_type)),
+                                  xmlNode("data", attrs = c("key" = "v_group_leader"), as.character(e[i,]$group_leader))
                                   )
     y_group_open <- xmlNode("y:GroupNode")
     y_group_open <- append.xmlNode(y_group_open,
@@ -513,6 +520,7 @@ while(any(!g_data$grouped))
   f$task <- NA
   f$joins_at <- NA
   f$group_type <- "family"
+  f$group_leader <- NA
 
   # For each group,
   #... compute aggregated attributes
@@ -538,8 +546,12 @@ while(any(!g_data$grouped))
 
     # Update group attributes
     f[i,]$joins_at <- g_data[match,]$joins_at
+    f[i,]$group_leader <- g_data[match,]$task
     temp <- f[i,]$parent
     f[i,]$parent <- g_data[match,]$parent
+    f[i,]$child_number <- g_data[match,]$num_children
+    f[i,]$num_tasks <-  f[i,]$num_tasks + g_data[match,]$num_tasks
+
     f[i,]$work_cycles <- as.numeric(f[i,]$work_cycles) + as.numeric(g_data[match,]$work_cycles)
     f[i,]$exec_cycles <- as.numeric(f[i,]$exec_cycles) + as.numeric(g_data[match,]$exec_cycles)
     if ("parallel_benefit" %in% colnames(g_data))
@@ -568,9 +580,6 @@ while(any(!g_data$grouped))
     # Clean-up!
     # Functions min and max return -Inf and +Inf respectively for zero-length vectors
     is.na(f) <- sapply(f, is.infinite)
-
-    f[i,]$child_number <- g_data[match,]$num_children
-    f[i,]$num_tasks <-  f[i,]$num_tasks + g_data[match,]$num_tasks
 
     # Update child member attributes
     matches <- which(g_data$parent == temp & g_data$task > max_task_id & g_data$grouped == F)
@@ -616,7 +625,8 @@ while(any(!g_data$grouped))
                                    xmlNode("data", attrs = c("key" = "v_shape"), "round rectangle"),
                                    xmlNode("data", attrs = c("key" = "v_num_tasks"), as.character(f[i,]$num_tasks)),
                                    xmlNode("data", attrs = c("key" = "v_num_members"), as.character(f[i,]$num_members)),
-                                   xmlNode("data", attrs = c("key" = "v_group_type"), as.character(f[i,]$group_type))
+                                   xmlNode("data", attrs = c("key" = "v_group_type"), as.character(f[i,]$group_type)),
+                                   xmlNode("data", attrs = c("key" = "v_group_leader"), as.character(f[i,]$group_leader))
                                    )
     y_group_open <- xmlNode("y:GroupNode")
     y_group_open <- append.xmlNode(y_group_open,
@@ -715,6 +725,11 @@ kn_group_type <- xmlNode("key", attrs = c("id" = "v_group_type",
                          "attr.name" = "group_type",
                          "attr.type" = "string"))
 graph_wrapper <- append.xmlNode(graph_wrapper, kn_group_type)
+kn_group_leader <- xmlNode("key", attrs = c("id" = "v_group_leader",
+                         "for" = "node",
+                         "attr.name" = "group_leader",
+                         "attr.type" = "string"))
+graph_wrapper <- append.xmlNode(graph_wrapper, kn_group_leader)
 kn_group_yrealizer <- xmlNode("key", attrs = c("id" = "v_group_yrealizer",
                          "for" = "node",
                          "yfiles.type" = "nodegraphics"))
