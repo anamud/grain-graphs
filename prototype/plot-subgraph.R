@@ -22,7 +22,7 @@ if (Rstudio_mode) {
   option_list <- list(
     make_option(c("--graph"), default="grain-graph.graphml", help="Non-aggregated grain graph [default \"%default\"].", metavar="FILE"), # Cannot add -g as option since it is parsed by Rscript as "gui" option
     make_option(c("--data"), default="aggregated-grain-graph-data.csv", help="Aggregated grain graph data [default \"%default\"].", metavar="FILE"),
-    make_option(c("--groupname"), default="1", help="Group at root of subgraph [default \"%default\"].", metavar="STRING"),
+    make_option(c("--groupname"), default="1", help="Group at root of subgraph [default \"%default\"].", metavar="INT"),
     make_option(c("--verbose"), action="store_true", default=TRUE, help="Print output [default]."),
     make_option(c("--timing"), action="store_true", default=FALSE, help="Print timing information."),
     make_option(c("--out"), default="subgraph", help="Subgraph output file prefix [default \"%default\"]", metavar="STRING"),
