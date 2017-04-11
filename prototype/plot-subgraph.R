@@ -117,6 +117,7 @@ get_members <- function(group_name, inv_checker, recursive=F)
 
     check_status <- inv_checker(group_name)
 
+    # Get tasks belonging to the group except the group itself
     ioe <- g_data %>% filter(group_id == group_name) %>% select(task, group_type) %>% filter(task != group_name)
 
     if (nrow(ioe) == 0)
