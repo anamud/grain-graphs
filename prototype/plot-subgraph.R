@@ -99,10 +99,25 @@ sink()
 # ... "non-problematic-sibling" => Return non-problematic siblings with fork and join nodes
 # ... abort on unknown group type
 # Function recurses into members that are groups
-get_members <- function(group_name, recursive=F)
+make_get_members_inv_checker <- function()
+{
+    processed_groups <- vector()
+    f <- function(group_name)
+    {
+        processed_groups <<- append(processed_groups, group_name)
+        stopifnot(length(unique(processed_groups)) == length(processed_groups))
+        return (0)
+    }
+    return (f)
+}
+
+get_members <- function(group_name, inv_checker, recursive=F)
 {
     #my_print(paste("Processing group", group_name, "..."))
-    ioe <- g_data %>% filter(group_id == group_name) %>% select(task, group_type)
+
+    check_status <- inv_checker(group_name)
+
+    ioe <- g_data %>% filter(group_id == group_name) %>% select(task, group_type) %>% filter(task != group_name)
 
     if (nrow(ioe) == 0)
         return (group_name)
@@ -114,7 +129,7 @@ get_members <- function(group_name, recursive=F)
             members <- unname(unlist(ioe %>% filter(task != sub_groups) %>% select(task)))
             for (sub_group in sub_groups)
             {
-                members <- append(members, get_members(sub_group, recursive))
+                members <- append(members, get_members(sub_group, inv_checker, recursive))
             }
         } else {
             members <- unname(unlist(ioe %>% select(task)))
@@ -147,7 +162,8 @@ if (cl_args$timing) tic(type="elapsed")
 # ... group exists in data
 # ... else abort
 if (cl_args$groupname %in% g_data$task) {
-    members <- get_members(cl_args$groupname, T)
+    get_members_inv_checker <- make_get_members_inv_checker()
+    members <- get_members(cl_args$groupname, get_members_inv_checker, T)
 } else {
     my_print(paste("Error: Group ", group_name, " not found in graph data. Aborting!", sep=""))
     quit("no", 1)
