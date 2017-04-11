@@ -138,8 +138,6 @@ get_members <- function(group_name, inv_checker, recursive=F)
         members <- unname(unlist(ioe %>% select(task)))
     }
 
-    print(members)
-
     ioe <- g_data %>% filter(task == group_name) %>% select(group_type, group_leader)
     if (ioe$group_type %in% c("sibling", "non-problematic-sibling")) {
         leader <- g_data %>% filter(task == ioe$group_leader) %>% select(parent, joins_at)
