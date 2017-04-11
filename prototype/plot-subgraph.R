@@ -17,7 +17,7 @@ if (Rstudio_mode) {
                  groupname="1",
                  verbose=T,
                  timing=F,
-                 out="sub-graph-<group_name>.graphml")
+                 out="subgraph")
 } else {
   option_list <- list(
     make_option(c("--graph"), default="grain-graph.graphml", help="Non-aggregated grain graph [default \"%default\"].", metavar="FILE"), # Cannot add -g as option since it is parsed by Rscript as "gui" option
@@ -132,4 +132,4 @@ if (cl_args$timing) toc("Plotting subgraph")
 # Warn
 w <- warnings()
 if (class(w) != "NULL")
-  print(w)
+  my_print(w)
