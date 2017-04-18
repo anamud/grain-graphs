@@ -137,6 +137,8 @@ if (cl_args$hidenonproblems & ("problematic" %in% colnames(g_data))) {
     hide_mode <- T
 }
 
+#Rprof("profile1.out")
+
 itr_count <- 0
 while(any(!g_data$grouped))
 {
@@ -698,6 +700,9 @@ while(any(!g_data$grouped))
 
   if (cl_args$timing) toc("Group families")
 }
+
+#Rprof(NULL)
+#summaryRprof("profile1.out")
 
 #if (cl_args$verbose) my_print("Post-grouping processes ...")
 if (cl_args$timing) tic(type="elapsed")
