@@ -121,7 +121,7 @@ g_data$group_leader <- g_data$task
 # ... Leaf siblings are complete sets of siblings that are leaves (i.e., without any children)
 # ... Single leaf siblings are possible too
 # 2. Group leaf siblings, join point, fork point together (members) into a leaf sibling group
-# 3. Assign unique id, accumulate attributes and performance of group members sensibly, and add as leaf task
+# 3. Assign unique id, accumulate attributes and performance of group members sensibly, and add
 # 4. Mark all families
 # ... Families are headed by parents whose children completely belong to leaf sibling groups
 # 5. Group families i.e., parent and leaf sibling groups of children together (members) into a family group
@@ -180,7 +180,7 @@ while(any(!g_data$grouped))
                                 problematic = 0,
                                 on_crit_path = if ("on_crit_path" %in% colnames(g_data)) as.integer(any(on_crit_path, na.rm = T)) else NA,
                                 child_number = NA,
-                                leaf = T,
+                                leaf = F,
                                 group_id = NA,
                                 grouped = F,
                                 group_type = "non-problematic-sibling",
@@ -334,7 +334,7 @@ while(any(!g_data$grouped))
                         problematic = if ("problematic" %in% colnames(g_data)) as.integer(any(problematic, na.rm = T)) else NA,
                         on_crit_path = if ("on_crit_path" %in% colnames(g_data)) as.integer(any(on_crit_path, na.rm = T)) else NA,
                         child_number = NA,
-                        leaf = T,
+                        leaf = F,
                         group_id = NA,
                         grouped = F,
                         group_type = "sibling",
