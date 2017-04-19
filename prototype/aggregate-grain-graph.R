@@ -184,7 +184,7 @@ while(any(!g_data$grouped))
                                 problematic = 0,
                                 on_crit_path = if ("on_crit_path" %in% colnames(g_data)) as.integer(any(on_crit_path, na.rm = T)) else NA,
                                 child_number = NA,
-                                leaf = F,
+                                leaf = T,
                                 group_id = NA,
                                 grouped = F,
                                 group_type = "non-problematic-sibling",
