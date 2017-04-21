@@ -700,6 +700,7 @@ while(any(!g_data$grouped))
   g_data <- bind_rows(g_data, f %>% select(-num_sibling_groups))
 
   #browser()
+
   # Garbage collect
   invisible(gc(reset=T))
 
