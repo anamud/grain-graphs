@@ -502,8 +502,8 @@ while(any(!g_data$grouped))
   #... TODO: Pick the first instead of maximum child_number
   #... ... All child_numbers are the same since they are proxies for child count of parent
   f <- g_data %>% group_by(parent) %>% filter(task > max_task_id & grouped == F) %>% summarize(num_tasks = sum(num_tasks),
-           num_members = sum(num_members),
-           num_sibling_groups = n(),
+           count = n(),
+           temp = sum(num_members),
            work_cycles = sum(as.numeric(work_cycles)),
            exec_cycles = sum(as.numeric(exec_cycles)),
            parallel_benefit = if ("parallel_benefit" %in% colnames(g_data)) min(parallel_benefit, na.rm = T) else NA,
@@ -521,7 +521,7 @@ while(any(!g_data$grouped))
            leaf = T,
            group_id = NA,
            grouped = F
-           ) %>% filter(num_members == child_number)
+           ) %>% filter(temp == child_number)
 
   # Ensure groups exist
   stopifnot(nrow(f) > 0)
@@ -697,7 +697,7 @@ while(any(!g_data$grouped))
   }
 
   # Add families as tasks
-  g_data <- bind_rows(g_data, f %>% select(-num_sibling_groups))
+  g_data <- bind_rows(g_data, f %>% select(-c(temp,count)))
 
   #browser()
 
