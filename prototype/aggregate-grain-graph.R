@@ -378,7 +378,7 @@ while(any(!g_data$grouped))
     # Update group attributes
     e[i,]$group_id <- ei_task
     e[i,]$group_leader <- g_data[matches[1], ]$task
-    e[i,]$group_iteration = itr_count
+    e[i,]$group_iteration <- itr_count
     # Save parent's child count for use during family grouping
     match <- which(g_data$task == ei_parent)
     stopifnot(length(match) == 1)
