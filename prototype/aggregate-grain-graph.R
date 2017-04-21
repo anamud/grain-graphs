@@ -380,10 +380,22 @@ while(any(!g_data$grouped))
     e[i,]$group_leader <- g_data[matches[1], ]$task
     e[i,]$group_iteration <- itr_count
     # Save parent's child count for use during family grouping
-    match <- which(g_data$task == ei_parent)
-    stopifnot(length(match) == 1)
     # Using child_number as a placeholder for number of children of parent
-    e[i,]$child_number <- g_data[match,]$num_children
+    if (ei_parent == 0) {
+        # TODO: Fix bug properly
+        # This assumes the implicit task creates only one task
+        my_print("Error! Bug condition triggered. Cannot continue.")
+        out_file <- paste(cl_args$outdata, ".bug-condition-abort", sep="")
+        sink(out_file)
+        write.csv(g_data, out_file, row.names=F)
+        sink()
+        my_print(paste("Wrote file:", out_file))
+        stopifnot(ei_parent != 0)
+    } else {
+        match <- which(g_data$task == ei_parent)
+        stopifnot(length(match) == 1)
+        e[i,]$child_number <- g_data[match,]$num_children
+    }
     # Correct num_members attribute to include members in non-problematic sibling groups
     e2 <- e1 %>% filter(group_type == "non-problematic-sibling") %>% summarize(count = n(), num_members = sum(num_members))
     if (nrow(e2) > 0) {
@@ -534,7 +546,8 @@ while(any(!g_data$grouped))
   f$joins_at <- NA
   f$group_type <- "family"
   f$group_leader <- NA
-  f$group_iteration <- 0
+  f$group_iteration <- itr_count
+  f$num_members <- NA
 
   # For each group,
   #... compute aggregated attributes
@@ -544,53 +557,59 @@ while(any(!g_data$grouped))
   {
     # Update group attributes
     f[i,]$task <- get_group_id()
-    f[i,]$num_members <- f[i,]$num_sibling_groups + 1
-    f[i,]$group_id <- f[i,]$task
-
-    # For quick retrieval
     fi_task <-  f[i,]$task
+    f[i,]$group_id <- fi_task
 
     # Update member attributes
     # Update parent member attributes
-    match <- which(g_data$task == f[i,]$parent)
-    stopifnot(length(match) == 1)
+    if (f[i,]$parent == 0) {
+        my_print("Error! Bug condition triggered. Cannot continue.")
+        out_file <- paste(cl_args$outdata, ".bug-condition-abort", sep="")
+        sink(out_file)
+        write.csv(g_data, out_file, row.names=F)
+        sink()
+        my_print(paste("Wrote file:", out_file))
+        stopifnot(f[,i]$parent != 0)
+    } else {
+        match <- which(g_data$task == f[i,]$parent)
+        stopifnot(length(match) == 1)
+        g_data[match, ]$group_id <- fi_task
+        g_data[match, ]$grouped <- T
 
-    g_data[match, ]$group_id <- fi_task
-    g_data[match, ]$grouped <- T
+        # Update group attributes
+        f[i,]$num_members <- f[i,]$count + 1
+        f[i,]$num_tasks <-  f[i,]$num_tasks + g_data[match,]$num_tasks
+        f[i,]$joins_at <- g_data[match,]$joins_at
+        f[i,]$group_leader <- g_data[match,]$task
+        f[i,]$child_number <- g_data[match,]$num_children
+        temp <- f[i,]$parent
+        f[i,]$parent <- g_data[match,]$parent
 
-    # Update group attributes
-    f[i,]$joins_at <- g_data[match,]$joins_at
-    f[i,]$group_leader <- g_data[match,]$task
-    f[i,]$group_iteration <- itr_count
-    temp <- f[i,]$parent
-    f[i,]$parent <- g_data[match,]$parent
-    f[i,]$child_number <- g_data[match,]$num_children
-    f[i,]$num_tasks <-  f[i,]$num_tasks + g_data[match,]$num_tasks
-
-    f[i,]$work_cycles <- as.numeric(f[i,]$work_cycles) + as.numeric(g_data[match,]$work_cycles)
-    f[i,]$exec_cycles <- as.numeric(f[i,]$exec_cycles) + as.numeric(g_data[match,]$exec_cycles)
-    if ("parallel_benefit" %in% colnames(g_data))
-        f[i,]$parallel_benefit = min(f[i,]$parallel_benefit, min(as.numeric(g_data[match,]$parallel_benefit), na.rm = T))
-    if ("work_deviation" %in% colnames(g_data))
-        f[i,]$work_deviation = max(f[i,]$work_deviation, max(as.numeric(g_data[match,]$work_deviation), na.rm = T))
-    if ("mem_hier_util" %in% colnames(g_data))
-        f[i,]$mem_hier_util = min(f[i,]$mem_hier_util, min(as.numeric(g_data[match,]$mem_hier_util), na.rm = T))
-    if ("inst_par_median" %in% colnames(g_data))
-        f[i,]$inst_par_median = min(f[i,]$inst_par_median, min(as.numeric(g_data[match,]$inst_par_median), na.rm = T))
-    if ("inst_par_min" %in% colnames(g_data))
-        f[i,]$inst_par_min = min(f[i,]$inst_par_min, min(as.numeric(g_data[match,]$inst_par_min), na.rm = T))
-    if ("inst_par_max" %in% colnames(g_data))
-        f[i,]$inst_par_max = min(f[i,]$inst_par_max, min(as.numeric(g_data[match,]$inst_par_max), na.rm = T))
-    if ("sibling_scatter" %in% colnames(g_data))
-        f[i,]$sibling_scatter = max(f[i,]$sibling_scatter, max(as.numeric(g_data[match,]$sibling_scatter), na.rm = T))
-    if ("sibling_work_balance" %in% colnames(g_data))
-        f[i,]$sibling_work_balance = max(f[i,]$sibling_work_balance, max(as.numeric(g_data[match,]$sibling_work_balance), na.rm = T))
-    if ("chunk_work_balance" %in% colnames(g_data))
-        f[i,]$chunk_work_balance = max(f[i,]$chunk_work_balance, max(as.numeric(g_data[match,]$chunk_work_balance), na.rm = T))
-    if ("problematic" %in% colnames(g_data))
-        f[i,]$problematic = as.integer(any(f[i,]$problematic, as.integer(any(as.numeric(g_data[match,]$problematic), na.rm = T))))
-    if ("on_crit_path" %in% colnames(g_data))
-        f[i,]$on_crit_path = as.integer(any(f[i,]$on_crit_path, as.integer(any(as.numeric(g_data[match,]$on_crit_path), na.rm = T))))
+        f[i,]$work_cycles <- as.numeric(f[i,]$work_cycles) + as.numeric(g_data[match,]$work_cycles)
+        f[i,]$exec_cycles <- as.numeric(f[i,]$exec_cycles) + as.numeric(g_data[match,]$exec_cycles)
+        if ("parallel_benefit" %in% colnames(g_data))
+            f[i,]$parallel_benefit = min(f[i,]$parallel_benefit, min(as.numeric(g_data[match,]$parallel_benefit), na.rm = T))
+        if ("work_deviation" %in% colnames(g_data))
+            f[i,]$work_deviation = max(f[i,]$work_deviation, max(as.numeric(g_data[match,]$work_deviation), na.rm = T))
+        if ("mem_hier_util" %in% colnames(g_data))
+            f[i,]$mem_hier_util = min(f[i,]$mem_hier_util, min(as.numeric(g_data[match,]$mem_hier_util), na.rm = T))
+        if ("inst_par_median" %in% colnames(g_data))
+            f[i,]$inst_par_median = min(f[i,]$inst_par_median, min(as.numeric(g_data[match,]$inst_par_median), na.rm = T))
+        if ("inst_par_min" %in% colnames(g_data))
+            f[i,]$inst_par_min = min(f[i,]$inst_par_min, min(as.numeric(g_data[match,]$inst_par_min), na.rm = T))
+        if ("inst_par_max" %in% colnames(g_data))
+            f[i,]$inst_par_max = min(f[i,]$inst_par_max, min(as.numeric(g_data[match,]$inst_par_max), na.rm = T))
+        if ("sibling_scatter" %in% colnames(g_data))
+            f[i,]$sibling_scatter = max(f[i,]$sibling_scatter, max(as.numeric(g_data[match,]$sibling_scatter), na.rm = T))
+        if ("sibling_work_balance" %in% colnames(g_data))
+            f[i,]$sibling_work_balance = max(f[i,]$sibling_work_balance, max(as.numeric(g_data[match,]$sibling_work_balance), na.rm = T))
+        if ("chunk_work_balance" %in% colnames(g_data))
+            f[i,]$chunk_work_balance = max(f[i,]$chunk_work_balance, max(as.numeric(g_data[match,]$chunk_work_balance), na.rm = T))
+        if ("problematic" %in% colnames(g_data))
+            f[i,]$problematic = as.integer(any(f[i,]$problematic, as.integer(any(as.numeric(g_data[match,]$problematic), na.rm = T))))
+        if ("on_crit_path" %in% colnames(g_data))
+            f[i,]$on_crit_path = as.integer(any(f[i,]$on_crit_path, as.integer(any(as.numeric(g_data[match,]$on_crit_path), na.rm = T))))
+    }
 
     # Clean-up!
     # Functions min and max return -Inf and +Inf respectively for zero-length vectors
