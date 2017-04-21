@@ -137,7 +137,7 @@ if (cl_args$hidenonproblems & ("problematic" %in% colnames(g_data))) {
     hide_mode <- T
 }
 
-#Rprof("profile1.out")
+#Rprof("profile1.out", interval=0.001)
 
 itr_count <- 0
 while(any(!g_data$grouped))
@@ -306,6 +306,8 @@ while(any(!g_data$grouped))
 
           # Add leaf sibling groups as tasks
           g_data <- bind_rows(g_data, d)
+
+          #browser()
       }
 
       # Garbage collect
@@ -484,6 +486,8 @@ while(any(!g_data$grouped))
 
   # Add leaf sibling groups as tasks
   g_data <- bind_rows(g_data, e)
+
+  #browser()
 
   # Garbage collect
   invisible(gc(reset=T))
@@ -695,6 +699,7 @@ while(any(!g_data$grouped))
   # Add families as tasks
   g_data <- bind_rows(g_data, f %>% select(-num_sibling_groups))
 
+  #browser()
   # Garbage collect
   invisible(gc(reset=T))
 
