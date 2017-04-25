@@ -24,6 +24,7 @@ if (Rstudio_mode) {
 } else {
     option_list <- list(make_option(c("--graph"), help = "Grain graph in GRAPHML format.", metavar="FILE"),
                         make_option(c("--grainproblemconfig"), default= paste(config_dir, "/grain-problems.cfg", sep=""), help = "Grain problem configuration file [default \"%default\"].", metavar="FILE"),
+                        make_option(c("--dimmingalpha"), default=0.2, help = "Alpha value (0 to 1) for colors of dimmed graph elements [default \"%default\"]."),
                         make_option(c("-o","--out"), default="grain-graph-diagnosis", help = "Output file suffix [default \"%default\"].", metavar="STRING"),
                         make_option(c("--layout"), action="store_true", default=FALSE, help="Layout using Sugiyama style and plot to PDF."),
                         make_option(c("--verbose"), action="store_true", default=TRUE, help="Print output [default]."),
@@ -62,10 +63,9 @@ is.na(task_data) <- is.na(task_data)
 task_data <- subset(task_data, !is.na(task))
 
 # Dim elements
-dimming_alpha <- 0.2
-vertex_colors_dimmed <- add.alpha(get.vertex.attribute(grain_graph, name='color'), alpha=dimming_alpha)
+vertex_colors_dimmed <- add.alpha(get.vertex.attribute(grain_graph, name='color'), alpha=cl_args$dimmingalpha)
 grain_graph <- set.vertex.attribute(grain_graph, name='color', value=vertex_colors_dimmed)
-edge_colors_dimmed <- add.alpha(get.edge.attribute(grain_graph, name='color'), alpha=dimming_alpha)
+edge_colors_dimmed <- add.alpha(get.edge.attribute(grain_graph, name='color'), alpha=cl_args$dimmingalpha)
 grain_graph <- set.edge.attribute(grain_graph, name='color', value=edge_colors_dimmed)
 #grain_graph <- set.edge.attribute(grain_graph, name='color', value="#c0c0c0")
 
