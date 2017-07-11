@@ -982,6 +982,15 @@ sink()
 if (cl_args$verbose) my_print("Writing grain graph information ...")
 my_print(paste("Wrote file:", grain_graph_info_out_file))
 
+# Convert attributes to string or double
+attribs <- vertex_attr_names(grain_graph)
+for (attr in attribs) {
+    attr_val <- get.vertex.attribute(grain_graph, attr)
+    if (!is.numeric(attr_val)) {
+        grain_graph <- set.vertex.attribute(grain_graph, attr, V(grain_graph), as.character(attr_val))
+    }
+}
+
 #
 # Write grain graph to file
 #
