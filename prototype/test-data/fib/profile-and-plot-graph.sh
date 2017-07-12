@@ -1,9 +1,14 @@
 #!/bin/bash
 
 # Outputs
+working_dir=new
 out_dir_worker_1=worker-1
 out_dir_worker_2=worker-2
 out_dir_graph=graph
+
+mkdir -p $working_dir
+
+cd $working_dir
 
 # Program parameters
 PROG=$MIR_ROOT/examples/OMP/fib/fib-opt.out
@@ -54,7 +59,7 @@ if [ -d $out_dir_worker_2 ]; then
     echo "Moved $out_dir_worker_2 to $out_dir_worker_2.backup"
 fi
 
-mkdir $out_dir_worker_2
+mkdir -p $out_dir_worker_2
 
 touch timestamp
 
@@ -83,7 +88,7 @@ if [ -d $out_dir_graph ]; then
     echo "Moved $out_dir_graph to $out_dir_graph.backup"
 fi
 
-mkdir $out_dir_graph
+mkdir -p $out_dir_graph
 
 touch timestamp
 
