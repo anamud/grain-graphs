@@ -17,7 +17,7 @@ Rstudio_mode <- F
 if (Rstudio_mode) {
   cl_args <- list(graph="grain-graph.graphml",
                  data="aggregated-grain-graph-data.csv",
-                 groupname="1",
+                 groupname="fj1",
                  enumcriticalpath=F,
                  grainpropertyconfig="grain-properties.cfg",
                  edgepropertyconfig="edge-properties.cfg",
@@ -28,7 +28,7 @@ if (Rstudio_mode) {
   option_list <- list(
     make_option(c("--graph"), default="grain-graph.graphml", help="Non-aggregated grain graph [default \"%default\"].", metavar="FILE"), # Cannot add -g as option since it is parsed by Rscript as "gui" option
     make_option(c("--data"), default="aggregated-grain-graph-data.csv", help="Aggregated grain graph data [default \"%default\"].", metavar="FILE"),
-    make_option(c("--groupname"), default="1", help="Group at root of subgraph [default \"%default\"].", metavar="INT"),
+    make_option(c("--groupname"), default="fj1", help="Group at root of subgraph [default \"%default\"].", metavar="INT"),
     make_option(c("--enumcriticalpath"), action="store_true", default=FALSE, help="Enumerate nodes on subgraph critical path."),
     make_option(c("--grainpropertyconfig"), default=paste(config_dir, "/grain-properties.cfg", sep=""), help = "Grain property configuration file [default \"%default\"].", metavar="FILE"),
     make_option(c("--edgepropertyconfig"), default=paste(config_dir, "/edge-properties.cfg", sep=""), help = "Edge property configuration file [default \"%default\"].", metavar="FILE"),
@@ -50,11 +50,8 @@ if (cl_args$verbose) my_print("Reading inputs ...")
 g_graphml <- read.graph(cl_args$graph, format="graphml")
 
 # Read data
-g_data <- read.csv(cl_args$data, header=TRUE, comment.char='#', na.strings="NA")
-if (!("task" %in% colnames(g_data))) {
-    my_print("Error: Graph data does not have task annotation. Aborting!")
-    quit("no", 1)
-}
+g_data <- read.csv(cl_args$data, header=FALSE, sep=';', comment.char='#', na.strings="NA")
+colnames(g_data) <- c("group", "member", "grouptype")
 g_data[g_data == "NA"] <- NA
 is.na(g_data) <- is.na(g_data)
 
@@ -92,64 +89,29 @@ sink(g_subgraph_info_out_file)
 sink()
 
 # Function to return members of group
-# Return value depends on group type
-# ... "task" => Return task
-# ... "family" => Return parent and all members of sibling groups
-# ... "sibling" => Return siblings with fork and join nodes
-# ... "non-problematic-sibling" => Return non-problematic siblings with fork and join nodes
-# ... abort on unknown group type
-# Function recurses into members that are groups
-make_get_members_inv_checker <- function()
-{
-    processed_groups <- vector()
-    f <- function(group_name)
-    {
-        processed_groups <<- append(processed_groups, group_name)
-        stopifnot(length(unique(processed_groups)) == length(processed_groups))
-        return (0)
-    }
-    return (f)
-}
-
-get_members <- function(group_name, inv_checker, recursive=F)
+get_members <- function(group_name)
 {
     #my_print(paste("Processing group", group_name, "..."))
 
-    check_status <- inv_checker(group_name)
+    temp <- unname(unlist(g_data %>% filter(group == group_name) %>% select(member)))
+    members <- unlist(strsplit(temp, ','))
 
-    # Get tasks belonging to the group except the group itself
-    ioe <- g_data %>% filter(group_id == group_name) %>% select(task, group_type) %>% filter(task != group_name)
+    stopifnot(length(members) > 0)
 
-    if (nrow(ioe) == 0)
-        return (group_name)
+    ungrouped_members <- c()
 
-    if (recursive) {
-        temp <- ioe %>% filter(group_type == "family" | group_type == "sibling" | group_type == "non-problematic-sibling")
-        if (nrow(temp) > 0) {
-            sub_groups <- unname(unlist(temp %>% select(task)))
-            members <- unname(unlist(ioe %>% filter(task != sub_groups) %>% select(task)))
-            for (sub_group in sub_groups)
-            {
-                members <- append(members, get_members(sub_group, inv_checker, recursive))
-            }
+    for (m in members) {
+        if (grepl("^s", m) | grepl("^fj", m) | grepl("^l", m)) {
+            temp <- get_members(m)
+            ungrouped_members <- append(ungrouped_members, temp)
         } else {
-            members <- unname(unlist(ioe %>% select(task)))
+            ungrouped_members <- append(ungrouped_members, m)
         }
-    } else {
-        members <- unname(unlist(ioe %>% select(task)))
     }
 
-    ioe <- g_data %>% filter(task == group_name) %>% select(group_type, group_leader)
-    if (ioe$group_type %in% c("sibling", "non-problematic-sibling")) {
-        leader <- g_data %>% filter(task == ioe$group_leader) %>% select(parent, joins_at)
-        fork_node <- paste("f.", leader$parent, ".", leader$joins_at, sep="")
-        join_node <- paste("j.", leader$parent, ".", leader$joins_at, sep="")
-        members <- append(members, c(fork_node, join_node))
-    }
+    ungrouped_members <- unique(ungrouped_members)
 
-    members <- unique(members)
-
-    return (members)
+    return (ungrouped_members)
 }
 
 if (cl_args$timing) toc("Initializing")
@@ -160,15 +122,7 @@ if (cl_args$timing) tic(type="elapsed")
 # Get members of group provided
 # ... group exists in data
 # ... else abort
-if (cl_args$groupname %in% g_data$task) {
-    get_members_inv_checker <- make_get_members_inv_checker()
-    members <- get_members(cl_args$groupname, get_members_inv_checker, T)
-} else {
-    my_print(paste("Error: Group ", group_name, " not found in graph data. Aborting!", sep=""))
-    quit("no", 1)
-}
-
-# TODO: Check if mebers exist in graph
+members <- get_members(cl_args$groupname)
 
 g_subgraph <- induced_subgraph(g_graphml, members, impl="auto")
 
@@ -316,6 +270,20 @@ if (cl_args$timing) tic(type="elapsed")
 # Plot subgraph
 temp_out_file <- paste(gsub(". $", "", cl_args$out), paste("-",cl_args$groupname, ".graphml", sep=""), sep="")
 res <- write.graph(g_subgraph, file=temp_out_file, format="graphml")
+my_print(paste("Wrote file:", temp_out_file))
+
+# Plot subgraph without attributes
+temp_out_file <- paste(gsub(". $", "", cl_args$out), paste("-",cl_args$groupname, "-noattrib.graphml", sep=""), sep="")
+g_subgraph_noattrib <- g_subgraph
+attribs <- vertex_attr_names(g_subgraph_noattrib)
+for (attrib in attribs) {
+    g_subgraph_noattrib <- delete_vertex_attr(g_subgraph_noattrib, attrib)
+}
+attribs <- edge_attr_names(g_subgraph_noattrib)
+for (attrib in attribs) {
+    g_subgraph_noattrib <- delete_edge_attr(g_subgraph_noattrib, attrib)
+}
+res <- write.graph(g_subgraph_noattrib, file=temp_out_file, format="graphml")
 my_print(paste("Wrote file:", temp_out_file))
 
 if (cl_args$timing) toc("Plotting subgraph")
